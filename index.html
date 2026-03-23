@@ -59,7 +59,7 @@
             color: var(--text-main);
             height: 100vh;
             display: flex;
-            flex-direction: column; /* Ajustado para o rodapé */
+            flex-direction: column; 
             align-items: center;
             justify-content: center;
             overflow: hidden;
@@ -154,7 +154,6 @@
             font-size: 18px; font-weight: 600; letter-spacing: 2px;
         }
 
-        /* Rodapé solicitado */
         .footer {
             margin-top: 30px;
             font-size: 12px;
@@ -246,6 +245,17 @@
             initTransferUI();
         });
 
+        // FUNÇÃO DE DOWNLOAD OTIMIZADA PARA REDES SOCIAIS
+        function triggerDownload(url, name) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = name;
+            a.target = '_blank'; // Abre em nova aba se o download direto falhar
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
         function setupConnEvents() {
             conn.on('data', (data) => {
                 if(data === "DISCONNECT_EVENT") return resetToHome();
@@ -267,8 +277,8 @@
                     
                     addItemToHistory(data.name, fileData.fileType, url, 'recebido');
                     
-                    const a = document.createElement('a');
-                    a.href = url; a.download = data.name; a.click();
+                    // Tenta o download automático
+                    triggerDownload(url, data.name);
                     
                     delete incomingChunks[data.name];
                     document.getElementById('file-info').innerText = "Concluído!";
@@ -331,10 +341,7 @@
                     <div class="file-meta">${direction} • ${type || 'app/file'}</div>
                 </div>
             `;
-            item.onclick = () => {
-                const a = document.createElement('a');
-                a.href = url; a.download = name; a.click();
-            };
+            item.onclick = () => triggerDownload(url, name);
             historyList.prepend(item);
         }
 
