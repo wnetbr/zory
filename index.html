@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Z-1 Premium</title>
+    <title>Z-1 | Transferência P2P</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -11,9 +11,9 @@
     <style>
         :root {
             --apple-blue: #007AFF;
-            --apple-bg: #ffffff;
-            --glass-bg: rgba(255, 255, 255, 0.75);
-            --glass-border: rgba(0, 0, 0, 0.08);
+            --apple-bg: #F5F5F7;
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(0, 0, 0, 0.1);
             --text-main: #1d1d1f;
             --text-sec: #86868b;
             --apple-red: #ff3b30;
@@ -24,9 +24,8 @@
 
         body {
             margin: 0;
-            font-family: "SF Pro Display", -apple-system, sans-serif;
-            background-color: #000;
-            background-image: radial-gradient(at 0% 0%, rgba(0,122,255,0.15) 0px, transparent 50%), white;
+            font-family: -apple-system, system-ui, sans-serif;
+            background: var(--apple-bg);
             color: var(--text-main);
             height: 100vh;
             display: flex;
@@ -36,166 +35,185 @@
         }
 
         .glass-container {
-            background: var(--glass-bg);
-            backdrop-filter: blur(30px) saturate(180%);
-            -webkit-backdrop-filter: blur(30px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 40px;
-            width: 92%;
+            background: #ffffff;
+            border: 1px solid var(--glass-border);
+            border-radius: 42px;
+            width: 90%;
             max-width: 400px;
-            max-height: 85vh;
-            padding: 35px 25px;
+            padding: 45px 35px;
             text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.05);
+            transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
-        h1 { font-size: 34px; font-weight: 800; margin: 0 0 5px; letter-spacing: -1.5px; }
-        .sub-status { color: var(--text-sec); font-size: 13px; margin-bottom: 25px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        h1 { font-size: 32px; font-weight: 700; margin: 0 0 8px; letter-spacing: -1px; }
+        .sub-status { color: var(--text-sec); font-size: 14px; margin-bottom: 35px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
 
         .apple-btn {
-            background: rgba(255, 255, 255, 0.8);
-            border: 1px solid var(--glass-border);
+            background: #f2f2f7;
+            border: 1px solid transparent;
             border-radius: 20px;
-            padding: 20px;
+            padding: 18px;
+            color: var(--text-main);
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 10px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
+            font-size: 13px;
+            font-weight: 500;
         }
-        .apple-btn svg { width: 24px; height: 24px; stroke: var(--apple-blue); fill: none; stroke-width: 2.5; transition: transform 0.3s ease; }
+
+        .apple-btn:active { background: #e5e5ea; transform: scale(0.96); }
+
+        .apple-btn svg { 
+            width: 26px; height: 26px; stroke: var(--apple-blue); fill: none; 
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+            transition: transform 0.3s ease;
+        }
+
         .apple-btn:hover svg { transform: translateY(-3px); }
-        .apple-btn:active { transform: scale(0.95); }
 
         .btn-connect {
             grid-column: span 2;
             background: var(--apple-blue);
             border: none;
             padding: 18px;
-            border-radius: 18px;
+            border-radius: 20px;
             color: white;
-            font-weight: 700;
+            font-weight: 600;
             font-size: 15px;
+            width: 100%;
             cursor: pointer;
-            box-shadow: 0 8px 20px rgba(0, 122, 255, 0.2);
+            margin-top: 5px;
+            transition: all 0.3s ease;
         }
+
+        .btn-disconnect {
+            background: none; border: none; color: var(--apple-red);
+            font-weight: 600; margin-top: 20px; cursor: pointer; font-size: 14px;
+        }
+
+        /* Histórico de Arquivos */
+        #history-section {
+            margin-top: 25px;
+            text-align: left;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 20px;
+        }
+        .history-list {
+            display: flex; flex-direction: column; gap: 8px;
+            max-height: 180px; overflow-y: auto; margin-top: 10px;
+        }
+        .history-item {
+            background: #f2f2f7; padding: 12px; border-radius: 16px;
+            display: flex; align-items: center; gap: 12px; cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .history-item:active { transform: scale(0.98); background: #e5e5ea; }
+        .file-icon { font-size: 20px; width: 30px; text-align: center; }
+        .file-details { flex: 1; overflow: hidden; }
+        .file-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-meta { font-size: 10px; color: var(--text-sec); text-transform: uppercase; }
+
+        /* Modais e DropZone */
+        #qr-modal, #scanner-modal {
+            display: none; position: fixed; inset: 0; background: rgba(255, 255, 255, 0.95);
+            z-index: 100; flex-direction: column; align-items: center; justify-content: center;
+            backdrop-filter: blur(20px); animation: modalFade 0.3s ease;
+        }
+        @keyframes modalFade { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
+
+        .drop-zone {
+            background: #f2f2f7; border: 1px solid var(--glass-border);
+            border-radius: 30px; padding: 40px 20px; cursor: pointer;
+        }
+        .progress-bar { width: 100%; height: 6px; background: #e5e5ea; border-radius: 10px; margin-top: 15px; overflow: hidden; display: none; }
+        #fill { width: 0%; height: 100%; background: var(--apple-blue); transition: 0.3s; }
+
+        .status-dot { width: 10px; height: 10px; background: #ff3b30; border-radius: 50%; }
+        .online { background: #34c759; animation: glow 2s infinite; }
+        @keyframes glow { 0%, 100% { box-shadow: 0 0 5px #34c759; } 50% { box-shadow: 0 0 15px #34c759; } }
 
         input[type="text"] {
-            width: 100%; background: rgba(0,0,0,0.05); border: 1px solid transparent;
-            border-radius: 15px; padding: 15px; text-align: center; font-size: 20px; 
-            font-weight: 700; margin: 10px 0; transition: 0.3s;
+            width: 100%; background: #f2f2f7; border: 1px solid var(--glass-border);
+            padding: 16px; border-radius: 16px; margin: 10px 0; text-align: center;
+            font-size: 18px; font-weight: 600; letter-spacing: 2px;
         }
-        input[type="text"]:focus { background: #fff; border-color: var(--apple-blue); }
-
-        /* LISTA DE ARQUIVOS */
-        #file-list {
-            margin-top: 15px;
-            text-align: left;
-            overflow-y: auto;
-            flex: 1;
-            padding-right: 5px;
-        }
-        .file-item {
-            background: rgba(255,255,255,0.6);
-            border: 1px solid var(--glass-border);
-            padding: 12px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            animation: fadeIn 0.4s ease;
-        }
-        .file-icon { font-size: 20px; background: #fff; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
-        .file-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
-
-        /* MODAIS E CÂMERA */
-        #qr-modal, #scanner-modal {
-            display: none; position: fixed; inset: 0; background: #fff;
-            z-index: 999; flex-direction: column; align-items: center; justify-content: center;
-        }
-        #reader { width: 100% !important; max-width: 350px; border-radius: 20px; overflow: hidden; border: none !important; }
-        #reader video { border-radius: 20px; object-fit: cover; }
-
-        .status-dot { width: 8px; height: 8px; background: var(--apple-red); border-radius: 50%; transition: 0.3s; }
-        .online { background: #34c759; box-shadow: 0 0 10px #34c759; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <div class="glass-container">
+    <div class="glass-container" id="main-card">
         <h1>Z-1</h1>
         <div class="sub-status">
             <div class="status-dot" id="dot"></div>
-            <span id="status-text">Conectando...</span>
+            <span id="status-text">Iniciando...</span>
         </div>
 
         <div id="setup-view">
             <div class="action-grid">
                 <button class="apple-btn" onclick="openQR()">
                     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                    MEU QR
+                    CÓDIGO
                 </button>
                 <button class="apple-btn" onclick="openScanner()">
                     <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h18a2 2 0 0 1 2 2z"></path><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
-                    ESCANEAR
+                    LEITOR
                 </button>
             </div>
-            <input type="text" id="manual-id" maxlength="4" placeholder="CÓDIGO ID">
-            <button class="btn-connect" onclick="connectManual()">Conectar agora</button>
+            <input type="text" id="manual-id" maxlength="4" placeholder="0000">
+            <button class="btn-connect" onclick="connectManual()">Conectar Dispositivo</button>
         </div>
 
-        <div id="transfer-view" style="display:none; flex-direction: column; height: 100%;">
-            <div class="apple-btn" style="width:100%; margin-bottom:15px; border-style: dashed; border-color: var(--apple-blue);" onclick="document.getElementById('file-input').click()">
-                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                <span>TOQUE PARA ENVIAR</span>
+        <div id="transfer-view" style="display:none;">
+            <div class="drop-zone" onclick="document.getElementById('file-input').click()">
+                <svg style="width:40px; height:40px; stroke:var(--apple-blue); margin-bottom:10px;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <div style="font-weight: 600; color: var(--apple-blue);">Enviar Arquivo</div>
             </div>
             
-            <div id="file-list">
-                <div style="font-size: 10px; font-weight: 800; color: var(--text-sec); letter-spacing: 1px; margin-bottom: 10px;">HISTÓRICO</div>
-            </div>
-            
+            <div class="progress-bar" id="p-bar"><div id="fill"></div></div>
+            <div id="file-info" style="margin-top:10px; font-size:12px; color: var(--text-sec);">Pronto para transferir</div>
             <input type="file" id="file-input" hidden>
-            <button onclick="disconnect()" style="background:none; border:none; color:var(--apple-red); font-weight:700; margin-top:15px; cursor:pointer;">Encerrar Conexão</button>
+
+            <div id="history-section">
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-sec);">HISTÓRICO</span>
+                <div class="history-list" id="history-list"></div>
+            </div>
+            
+            <button class="btn-disconnect" onclick="disconnect()">Desconectar</button>
         </div>
     </div>
 
-    <div id="qr-modal" onclick="this.style.display='none'">
+    <div id="qr-modal" onclick="closeModals()">
         <div id="qrcode"></div>
-        <p style="font-weight:700; margin-top:20px;">Seu código de conexão</p>
-        <span style="color:var(--text-sec); font-size:12px;">Toque em qualquer lugar para fechar</span>
+        <p>Escaneie para conectar</p>
     </div>
 
     <div id="scanner-modal">
         <div id="reader"></div>
-        <button onclick="stopScanner()" style="margin-top:30px; padding:15px 40px; border-radius:20px; border:none; background:var(--apple-red); color:white; font-weight:700;">CANCELAR</button>
+        <button class="apple-btn" style="margin-top:20px; background:var(--apple-red); color:white;" onclick="stopScanner()">Cancelar</button>
     </div>
 
     <script>
         let peer, conn;
-        const statusText = document.getElementById('status-text');
-        const dot = document.getElementById('dot');
-        const fileList = document.getElementById('file-list');
         const shortId = Math.floor(1000 + Math.random() * 9000).toString();
+        const historyList = document.getElementById('history-list');
 
         peer = new Peer(shortId);
 
         peer.on('open', (id) => {
-            dot.classList.add('online');
-            statusText.innerHTML = `Online • ID: <strong>${id}</strong>`;
-            document.getElementById("qrcode").innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), { text: id, width: 220, height: 220 });
+            document.getElementById('dot').classList.add('online');
+            document.getElementById('status-text').innerHTML = `ID: <strong>${id}</strong>`;
+            new QRCode(document.getElementById("qrcode"), { text: id, width: 200, height: 200 });
         });
 
         peer.on('connection', (c) => {
@@ -206,54 +224,62 @@
 
         function setupConnEvents() {
             conn.on('data', (data) => {
-                if(data === "DISCONNECT") { resetToHome(); return; }
-                addFileToList(data, 'recebido');
+                if(data === "DISCONNECT_EVENT") return resetToHome();
+                
+                // Recebendo arquivo
+                const blob = new Blob([data.file], { type: data.type });
+                const url = URL.createObjectURL(blob);
+                addItemToHistory(data.name, data.type, url, 'recebido');
+                
+                // Trigger download automático para apps/arquivos
+                const a = document.createElement('a');
+                a.href = url; a.download = data.name; a.click();
             });
             conn.on('close', resetToHome);
         }
 
-        function addFileToList(data, type) {
-            const blob = new Blob([data.file], { type: data.type });
-            const url = URL.createObjectURL(blob);
+        function addItemToHistory(name, type, url, direction) {
             const item = document.createElement('div');
-            item.className = 'file-item';
+            item.className = 'history-item';
             
             let icon = '📄';
-            if(data.type.includes('image')) icon = '🖼️';
-            if(data.type.includes('video')) icon = '🎬';
-            if(data.name.endsWith('.apk')) icon = '⚙️';
+            if(type.includes('image')) icon = '🖼️';
+            else if(type.includes('video')) icon = '🎬';
+            else if(name.endsWith('.apk') || name.endsWith('.exe')) icon = '📦';
 
-            item.innerHTML = `<div class="file-icon">${icon}</div><div class="file-details"><div class="file-name">${data.name}</div></div>`;
+            item.innerHTML = `
+                <div class="file-icon">${icon}</div>
+                <div class="file-details">
+                    <div class="file-name">${name}</div>
+                    <div class="file-meta">${direction} • ${type || 'app/file'}</div>
+                </div>
+            `;
+            
             item.onclick = () => {
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = data.name;
-                (data.type.includes('image') || data.type.includes('video')) ? window.open(url, '_blank') : a.click();
+                a.download = name;
+                a.click();
             };
-            fileList.appendChild(item);
+            
+            historyList.prepend(item);
         }
 
-        function openQR() { document.getElementById('qr-modal').style.display = 'flex'; }
-        
-        function openScanner() {
-            document.getElementById('scanner-modal').style.display = 'flex';
-            window.activeScanner = new Html5Qrcode("reader");
-            window.activeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (id) => {
-                document.getElementById('manual-id').value = id;
-                stopScanner();
-                connectManual();
-            });
-        }
+        document.getElementById('file-input').onchange = (e) => {
+            const file = e.target.files[0];
+            if(!file || !conn) return;
 
-        function stopScanner() {
-            if(window.activeScanner) {
-                window.activeScanner.stop().then(() => {
-                    document.getElementById('scanner-modal').style.display = 'none';
-                });
-            } else {
-                document.getElementById('scanner-modal').style.display = 'none';
-            }
-        }
+            document.getElementById('p-bar').style.display = 'block';
+            document.getElementById('fill').style.width = '100%';
+            
+            conn.send({ file: file, name: file.name, type: file.type });
+            addItemToHistory(file.name, file.type, URL.createObjectURL(file), 'enviado');
+
+            setTimeout(() => {
+                document.getElementById('fill').style.width = '0%';
+                document.getElementById('p-bar').style.display = 'none';
+            }, 1000);
+        };
 
         function connectManual() {
             const id = document.getElementById('manual-id').value;
@@ -264,24 +290,34 @@
         }
 
         function initTransferUI() {
+            closeModals();
             document.getElementById('setup-view').style.display = 'none';
-            document.getElementById('transfer-view').style.display = 'flex';
-            statusText.innerText = "Conectado P2P";
+            document.getElementById('transfer-view').style.display = 'block';
+            document.getElementById('status-text').innerText = "Conectado";
         }
 
         function resetToHome() {
-            location.reload(); // Recarrega para limpar estado e peer
+            location.reload(); 
         }
 
-        function disconnect() { if(conn) { conn.send("DISCONNECT"); setTimeout(() => resetToHome(), 500); } }
+        function disconnect() {
+            if(conn) { conn.send("DISCONNECT_EVENT"); setTimeout(() => resetToHome(), 500); }
+        }
 
-        document.getElementById('file-input').onchange = (e) => {
-            const file = e.target.files[0];
-            if(!file || !conn) return;
-            const dataObj = { file: file, name: file.name, type: file.type };
-            conn.send(dataObj);
-            addFileToList(dataObj, 'enviado');
-        };
+        function openQR() { document.getElementById('qr-modal').style.display = 'flex'; }
+        function closeModals() { document.getElementById('qr-modal').style.display = 'none'; }
+        
+        function openScanner() {
+            document.getElementById('scanner-modal').style.display = 'flex';
+            const scanner = new Html5Qrcode("reader");
+            scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, (id) => {
+                document.getElementById('manual-id').value = id;
+                scanner.stop();
+                document.getElementById('scanner-modal').style.display = 'none';
+                connectManual();
+            });
+        }
+        function stopScanner() { document.getElementById('scanner-modal').style.display = 'none'; }
     </script>
 </body>
 </html>
