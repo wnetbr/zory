@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V.1</title>
+    <title>aura</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -59,6 +59,7 @@
             color: var(--text-main);
             height: 100vh;
             display: flex;
+            flex-direction: column; /* Ajustado para o rodapé */
             align-items: center;
             justify-content: center;
             overflow: hidden;
@@ -152,12 +153,25 @@
             padding: 16px; border-radius: 16px; margin: 10px 0; text-align: center;
             font-size: 18px; font-weight: 600; letter-spacing: 2px;
         }
+
+        /* Rodapé solicitado */
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: var(--text-sec);
+            font-weight: 500;
+        }
+        .footer a {
+            color: var(--apple-blue);
+            text-decoration: none;
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
 
     <div class="glass-container" id="main-card">
-        <h1>V.1</h1>
+        <h1>AURA</h1>
         <div class="sub-status">
             <div class="status-dot" id="dot"></div>
             <span id="status-text">Iniciando...</span>
@@ -197,6 +211,10 @@
         </div>
     </div>
 
+    <div class="footer">
+        Desenvolvido por <a href="https://wnetbr.github.io/-" target="_blank">WNET</a>
+    </div>
+
     <div id="qr-modal" onclick="closeModals()">
         <div id="qrcode"></div>
         <p>Escaneie para conectar</p>
@@ -210,7 +228,7 @@
     <script>
         let peer, conn;
         let html5QrCode;
-        let incomingChunks = {}; // Para reconstruir arquivos recebidos
+        let incomingChunks = {}; 
         const shortId = Math.floor(1000 + Math.random() * 9000).toString();
         const historyList = document.getElementById('history-list');
 
@@ -232,7 +250,6 @@
             conn.on('data', (data) => {
                 if(data === "DISCONNECT_EVENT") return resetToHome();
 
-                // LÓGICA DE RECEBIMENTO EM TEMPO REAL
                 if (data.type === 'FILE_START') {
                     incomingChunks[data.name] = { chunks: [], fileType: data.fileType, size: data.size };
                     document.getElementById('p-bar').style.display = 'block';
@@ -261,7 +278,6 @@
             conn.on('close', resetToHome);
         }
 
-        // LÓGICA DE ENVIO EM TEMPO REAL (CHUNKED)
         document.getElementById('file-input').onchange = (e) => {
             const file = e.target.files[0];
             if(!file || !conn) return;
@@ -269,7 +285,7 @@
             document.getElementById('p-bar').style.display = 'block';
             document.getElementById('file-info').innerText = "Enviando: " + file.name;
 
-            const chunkSize = 16384; // 16KB
+            const chunkSize = 16384; 
             let offset = 0;
 
             conn.send({ type: 'FILE_START', name: file.name, fileType: file.type, size: file.size });
