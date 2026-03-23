@@ -1,0 +1,410 @@
+<!DOCTYPE html><html><head><style>/* Ajuste para o Modal da Câmera */
+#scanner-modal {
+    display: none; 
+    position: fixed; 
+    inset: 0; 
+    background: rgba(255, 255, 255, 0.6); /* Efeito translúcido */
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    z-index: 1000; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+}
+
+/* Onde o vídeo da câmera aparece */
+#reader { 
+    width: 320px; 
+    height: 320px; 
+    border-radius: 40px; 
+    overflow: hidden; 
+    background: #000; /* Fundo preto enquanto carrega */
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    border: 4px solid #fff !important;
+}
+
+/* Força o vídeo da câmera a preencher o quadrado sem distorcer */
+#reader video {
+    object-fit: cover !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Botão de fechar flutuante ou abaixo */
+.cam-close-btn {
+    margin-top: 30px;
+    padding: 16px 40px;
+    background: var(--apple-red);
+    color: white;
+    border-radius: 20px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(255, 59, 48, 0.3);
+}</style></head><body><!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-1 | Transferência P2P</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    
+    <style>
+        :root {
+            --apple-blue: #007AFF;
+            --apple-bg: #F5F5F7;
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --text-main: #1d1d1f;
+            --text-sec: #86868b;
+            --apple-red: #ff3b30;
+            --system-gray: #f2f2f7;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, system-ui, sans-serif;
+            background: var(--apple-bg);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .glass-container {
+            background: #ffffff;
+            border: 1px solid var(--glass-border);
+            border-radius: 42px;
+            width: 90%;
+            max-width: 400px;
+            padding: 45px 35px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.05);
+            transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        h1 { font-size: 32px; font-weight: 700; margin: 0 0 8px; letter-spacing: -1px; }
+        .sub-status { color: var(--text-sec); font-size: 14px; margin-bottom: 35px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .apple-btn {
+            background: #f2f2f7;
+            border: 1px solid transparent;
+            border-radius: 20px;
+            padding: 18px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .apple-btn:active { background: #e5e5ea; transform: scale(0.96); }
+
+        .apple-btn svg { 
+            width: 26px; height: 26px; stroke: var(--apple-blue); fill: none; 
+            stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+            transition: transform 0.3s ease;
+        }
+
+        .apple-btn:hover svg { transform: translateY(-3px); }
+
+        .btn-connect {
+            grid-column: span 2;
+            background: var(--apple-blue);
+            border: none;
+            padding: 18px;
+            border-radius: 20px;
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-disconnect {
+            background: none; border: none; color: var(--apple-red);
+            font-weight: 600; margin-top: 20px; cursor: pointer; font-size: 14px;
+        }
+
+        /* Histórico de Arquivos */
+        #history-section {
+            margin-top: 25px;
+            text-align: left;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 20px;
+        }
+        .history-list {
+            display: flex; flex-direction: column; gap: 8px;
+            max-height: 180px; overflow-y: auto; margin-top: 10px;
+        }
+        .history-item {
+            background: #f2f2f7; padding: 12px; border-radius: 16px;
+            display: flex; align-items: center; gap: 12px; cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .history-item:active { transform: scale(0.98); background: #e5e5ea; }
+        .file-icon { font-size: 20px; width: 30px; text-align: center; }
+        .file-details { flex: 1; overflow: hidden; }
+        .file-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-meta { font-size: 10px; color: var(--text-sec); text-transform: uppercase; }
+
+        /* Modais e DropZone */
+        #qr-modal, #scanner-modal {
+            display: none; position: fixed; inset: 0; background: rgba(255, 255, 255, 0.95);
+            z-index: 100; flex-direction: column; align-items: center; justify-content: center;
+            backdrop-filter: blur(20px); animation: modalFade 0.3s ease;
+        }
+        @keyframes modalFade { from { opacity: 0; transform: scale(1.05); } to { opacity: 1; transform: scale(1); } }
+
+        .drop-zone {
+            background: #f2f2f7; border: 1px solid var(--glass-border);
+            border-radius: 30px; padding: 40px 20px; cursor: pointer;
+        }
+        .progress-bar { width: 100%; height: 6px; background: #e5e5ea; border-radius: 10px; margin-top: 15px; overflow: hidden; display: none; }
+        #fill { width: 0%; height: 100%; background: var(--apple-blue); transition: 0.3s; }
+
+        .status-dot { width: 10px; height: 10px; background: #ff3b30; border-radius: 50%; }
+        .online { background: #34c759; animation: glow 2s infinite; }
+        @keyframes glow { 0%, 100% { box-shadow: 0 0 5px #34c759; } 50% { box-shadow: 0 0 15px #34c759; } }
+
+        input[type="text"] {
+            width: 100%; background: #f2f2f7; border: 1px solid var(--glass-border);
+            padding: 16px; border-radius: 16px; margin: 10px 0; text-align: center;
+            font-size: 18px; font-weight: 600; letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glass-container" id="main-card">
+        <h1>Z-1</h1>
+        <div class="sub-status">
+            <div class="status-dot" id="dot"></div>
+            <span id="status-text">Iniciando...</span>
+        </div>
+
+        <div id="setup-view">
+            <div class="action-grid">
+                <button class="apple-btn" onclick="openQR()">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    CÓDIGO
+                </button>
+                <button class="apple-btn" onclick="openScanner()">
+                    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h18a2 2 0 0 1 2 2z"></path><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
+                    LEITOR
+                </button>
+            </div>
+            <input type="text" id="manual-id" maxlength="4" placeholder="0000">
+            <button class="btn-connect" onclick="connectManual()">Conectar Dispositivo</button>
+        </div>
+
+        <div id="transfer-view" style="display:none;">
+            <div class="drop-zone" onclick="document.getElementById('file-input').click()">
+                <svg style="width:40px; height:40px; stroke:var(--apple-blue); margin-bottom:10px;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <div style="font-weight: 600; color: var(--apple-blue);">Enviar Arquivo</div>
+            </div>
+            
+            <div class="progress-bar" id="p-bar"><div id="fill"></div></div>
+            <div id="file-info" style="margin-top:10px; font-size:12px; color: var(--text-sec);">Pronto para transferir</div>
+            <input type="file" id="file-input" hidden>
+
+            <div id="history-section">
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-sec);">HISTÓRICO</span>
+                <div class="history-list" id="history-list"></div>
+            </div>
+            
+            <button class="btn-disconnect" onclick="disconnect()">Desconectar</button>
+        </div>
+    </div>
+
+    <div id="qr-modal" onclick="closeModals()">
+        <div id="qrcode"></div>
+        <p>Escaneie para conectar</p>
+    </div>
+
+    <div id="scanner-modal">
+        <div id="reader"></div>
+        <button class="apple-btn" style="margin-top:20px; background:var(--apple-red); color:white;" onclick="stopScanner()">Cancelar</button>
+    </div>
+
+    <script>
+        let peer, conn;
+        const shortId = Math.floor(1000 + Math.random() * 9000).toString();
+        const historyList = document.getElementById('history-list');
+
+        peer = new Peer(shortId);
+
+        peer.on('open', (id) => {
+            document.getElementById('dot').classList.add('online');
+            document.getElementById('status-text').innerHTML = `ID: <strong>${id}</strong>`;
+            new QRCode(document.getElementById("qrcode"), { text: id, width: 200, height: 200 });
+        });
+
+        peer.on('connection', (c) => {
+            conn = c;
+            setupConnEvents();
+            initTransferUI();
+        });
+
+        function setupConnEvents() {
+            conn.on('data', (data) => {
+                if(data === "DISCONNECT_EVENT") return resetToHome();
+                
+                // Recebendo arquivo
+                const blob = new Blob([data.file], { type: data.type });
+                const url = URL.createObjectURL(blob);
+                addItemToHistory(data.name, data.type, url, 'recebido');
+                
+                // Trigger download automático para apps/arquivos
+                const a = document.createElement('a');
+                a.href = url; a.download = data.name; a.click();
+            });
+            conn.on('close', resetToHome);
+        }
+
+        function addItemToHistory(name, type, url, direction) {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            
+            let icon = '📄';
+            if(type.includes('image')) icon = '🖼️';
+            else if(type.includes('video')) icon = '🎬';
+            else if(name.endsWith('.apk') || name.endsWith('.exe')) icon = '📦';
+
+            item.innerHTML = `
+                <div class="file-icon">${icon}</div>
+                <div class="file-details">
+                    <div class="file-name">${name}</div>
+                    <div class="file-meta">${direction} • ${type || 'app/file'}</div>
+                </div>
+            `;
+            
+            item.onclick = () => {
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = name;
+                a.click();
+            };
+            
+            historyList.prepend(item);
+        }
+
+        document.getElementById('file-input').onchange = (e) => {
+            const file = e.target.files[0];
+            if(!file || !conn) return;
+
+            document.getElementById('p-bar').style.display = 'block';
+            document.getElementById('fill').style.width = '100%';
+            
+            conn.send({ file: file, name: file.name, type: file.type });
+            addItemToHistory(file.name, file.type, URL.createObjectURL(file), 'enviado');
+
+            setTimeout(() => {
+                document.getElementById('fill').style.width = '0%';
+                document.getElementById('p-bar').style.display = 'none';
+            }, 1000);
+        };
+
+        function connectManual() {
+            const id = document.getElementById('manual-id').value;
+            if(!id) return;
+            conn = peer.connect(id);
+            setupConnEvents();
+            initTransferUI();
+        }
+
+        function initTransferUI() {
+            closeModals();
+            document.getElementById('setup-view').style.display = 'none';
+            document.getElementById('transfer-view').style.display = 'block';
+            document.getElementById('status-text').innerText = "Conectado";
+        }
+
+        function resetToHome() {
+            location.reload(); 
+        }
+
+        function disconnect() {
+            if(conn) { conn.send("DISCONNECT_EVENT"); setTimeout(() => resetToHome(), 500); }
+        }
+
+        function openQR() { document.getElementById('qr-modal').style.display = 'flex'; }
+        function closeModals() { document.getElementById('qr-modal').style.display = 'none'; }
+        
+        function openScanner() {
+            document.getElementById('scanner-modal').style.display = 'flex';
+            const scanner = new Html5Qrcode("reader");
+            scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, (id) => {
+                document.getElementById('manual-id').value = id;
+                scanner.stop();
+                document.getElementById('scanner-modal').style.display = 'none';
+                connectManual();
+            });
+        }
+        function stopScanner() { document.getElementById('scanner-modal').style.display = 'none'; }
+    </script>
+</body>
+</html><script>let html5QrCode; // Variável global para controlar a instância
+
+function openScanner() {
+    document.getElementById('scanner-modal').style.display = 'flex';
+    
+    // Instancia o scanner se ainda não existir
+    if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+    }
+
+    const config = { 
+        fps: 10, 
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0 // Mantém quadrado estilo iOS
+    };
+
+    html5QrCode.start(
+        { facingMode: "environment" }, 
+        config,
+        (decodedText) => {
+            // Sucesso ao ler
+            document.getElementById('manual-id').value = decodedText;
+            stopScanner();
+            connectManual();
+        },
+        (errorMessage) => {
+            // Erro de leitura (comum enquanto procura o QR)
+        }
+    ).catch((err) => {
+        console.error("Erro ao iniciar câmera: ", err);
+        alert("Certifique-se de dar permissão à câmera e usar HTTPS.");
+    });
+}
+
+function stopScanner() {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            document.getElementById('scanner-modal').style.display = 'none';
+        }).catch(err => {
+            document.getElementById('scanner-modal').style.display = 'none';
+        });
+    } else {
+        document.getElementById('scanner-modal').style.display = 'none';
+    }
+}</script></body></html>
