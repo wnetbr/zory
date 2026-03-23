@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Z-1</title>
+    <title>Z-1 Premium</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -12,7 +12,7 @@
         :root {
             --apple-blue: #007AFF;
             --apple-bg: #ffffff;
-            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-bg: rgba(255, 255, 255, 0.75);
             --glass-border: rgba(0, 0, 0, 0.08);
             --text-main: #1d1d1f;
             --text-sec: #86868b;
@@ -24,12 +24,9 @@
 
         body {
             margin: 0;
-            font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: "SF Pro Display", -apple-system, sans-serif;
             background-color: #000;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(0,122,255,0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(255,59,48,0.1) 0px, transparent 50%),
-                white;
+            background-image: radial-gradient(at 0% 0%, rgba(0,122,255,0.15) 0px, transparent 50%), white;
             color: var(--text-main);
             height: 100vh;
             display: flex;
@@ -43,38 +40,39 @@
             backdrop-filter: blur(30px) saturate(180%);
             -webkit-backdrop-filter: blur(30px) saturate(180%);
             border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 48px;
+            border-radius: 40px;
             width: 92%;
-            max-width: 420px;
-            max-height: 90vh;
-            padding: 40px 30px;
+            max-width: 400px;
+            max-height: 85vh;
+            padding: 35px 25px;
             text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
         }
 
-        h1 { font-size: 38px; font-weight: 800; margin: 0 0 10px; letter-spacing: -2px; }
-        .sub-status { color: var(--text-sec); font-size: 13px; margin-bottom: 30px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        h1 { font-size: 34px; font-weight: 800; margin: 0 0 5px; letter-spacing: -1.5px; }
+        .sub-status { color: var(--text-sec); font-size: 13px; margin-bottom: 25px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
 
         .apple-btn {
-            background: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.8);
             border: 1px solid var(--glass-border);
             border-radius: 20px;
-            padding: 18px;
+            padding: 20px;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 10px;
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
-        .apple-btn svg { width: 24px; height: 24px; stroke: var(--apple-blue); fill: none; stroke-width: 2; }
+        .apple-btn svg { width: 24px; height: 24px; stroke: var(--apple-blue); fill: none; stroke-width: 2.5; transition: transform 0.3s ease; }
+        .apple-btn:hover svg { transform: translateY(-3px); }
         .apple-btn:active { transform: scale(0.95); }
 
         .btn-connect {
@@ -82,119 +80,106 @@
             background: var(--apple-blue);
             border: none;
             padding: 18px;
-            border-radius: 20px;
+            border-radius: 18px;
             color: white;
             font-weight: 700;
-            width: 100%;
+            font-size: 15px;
             cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0, 122, 255, 0.2);
         }
 
-        .drop-zone {
-            background: #f2f2f7;
-            border: 2px dashed var(--glass-border);
-            border-radius: 24px;
-            padding: 40px 20px;
-            cursor: pointer;
-            transition: 0.3s;
+        input[type="text"] {
+            width: 100%; background: rgba(0,0,0,0.05); border: 1px solid transparent;
+            border-radius: 15px; padding: 15px; text-align: center; font-size: 20px; 
+            font-weight: 700; margin: 10px 0; transition: 0.3s;
         }
+        input[type="text"]:focus { background: #fff; border-color: var(--apple-blue); }
 
-        /* LISTA DE ARQUIVOS ESTILO IOS */
+        /* LISTA DE ARQUIVOS */
         #file-list {
-            margin-top: 20px;
+            margin-top: 15px;
             text-align: left;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            overflow-y: auto;
+            flex: 1;
+            padding-right: 5px;
         }
-
         .file-item {
-            background: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.6);
             border: 1px solid var(--glass-border);
-            padding: 12px 16px;
+            padding: 12px;
             border-radius: 16px;
             display: flex;
             align-items: center;
             gap: 12px;
+            margin-bottom: 8px;
             cursor: pointer;
-            transition: 0.2s;
-            animation: slideUp 0.4s ease;
+            animation: fadeIn 0.4s ease;
         }
-        .file-item:hover { background: #fff; transform: translateX(5px); }
-        .file-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--system-gray); border-radius: 8px; font-size: 18px; }
-        .file-details { flex: 1; overflow: hidden; }
-        .file-name { font-size: 13px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-anchor: middle; text-overflow: ellipsis; }
-        .file-meta { font-size: 11px; color: var(--text-sec); }
+        .file-icon { font-size: 20px; background: #fff; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+        .file-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
 
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* MODAIS E CÂMERA */
+        #qr-modal, #scanner-modal {
+            display: none; position: fixed; inset: 0; background: #fff;
+            z-index: 999; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #reader { width: 100% !important; max-width: 350px; border-radius: 20px; overflow: hidden; border: none !important; }
+        #reader video { border-radius: 20px; object-fit: cover; }
 
-        .progress-bar { width: 100%; height: 6px; background: #e5e5ea; border-radius: 10px; margin-top: 15px; overflow: hidden; display: none; }
-        #fill { width: 0%; height: 100%; background: var(--apple-blue); transition: 0.3s; }
-
-        .status-dot { width: 8px; height: 8px; background: var(--apple-red); border-radius: 50%; }
+        .status-dot { width: 8px; height: 8px; background: var(--apple-red); border-radius: 50%; transition: 0.3s; }
         .online { background: #34c759; box-shadow: 0 0 10px #34c759; }
 
-        input[type="text"] {
-            width: 100%; background: rgba(0,0,0,0.04); border-radius: 16px; padding: 15px;
-            border: none; text-align: center; font-size: 20px; font-weight: 700; margin: 10px 0;
-        }
-
-        #qr-modal, #scanner-modal {
-            display: none; position: fixed; inset: 0; background: rgba(255, 255, 255, 0.9);
-            z-index: 100; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(20px);
-        }
-        
-        .btn-disconnect { background: none; border: none; color: var(--apple-red); font-weight: 600; margin-top: 20px; cursor: pointer; font-size: 13px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <div class="glass-container" id="main-card">
+    <div class="glass-container">
         <h1>Z-1</h1>
         <div class="sub-status">
             <div class="status-dot" id="dot"></div>
-            <span id="status-text">Iniciando...</span>
+            <span id="status-text">Conectando...</span>
         </div>
 
         <div id="setup-view">
             <div class="action-grid">
                 <button class="apple-btn" onclick="openQR()">
                     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                    CÓDIGO
+                    MEU QR
                 </button>
                 <button class="apple-btn" onclick="openScanner()">
                     <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h18a2 2 0 0 1 2 2z"></path><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
-                    LEITOR
+                    ESCANEAR
                 </button>
             </div>
-            <input type="text" id="manual-id" maxlength="4" placeholder="0000">
-            <button class="btn-connect" onclick="connectManual()">Conectar Dispositivo</button>
+            <input type="text" id="manual-id" maxlength="4" placeholder="CÓDIGO ID">
+            <button class="btn-connect" onclick="connectManual()">Conectar agora</button>
         </div>
 
-        <div id="transfer-view" style="display:none;">
-            <div class="drop-zone" onclick="document.getElementById('file-input').click()">
-                <svg style="width:32px; height:32px; stroke:var(--apple-blue); margin-bottom:10px;" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                <div style="font-weight: 700; color: var(--apple-blue);">Enviar Arquivo</div>
+        <div id="transfer-view" style="display:none; flex-direction: column; height: 100%;">
+            <div class="apple-btn" style="width:100%; margin-bottom:15px; border-style: dashed; border-color: var(--apple-blue);" onclick="document.getElementById('file-input').click()">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <span>TOQUE PARA ENVIAR</span>
             </div>
             
-            <div class="progress-bar" id="p-bar"><div id="fill"></div></div>
-            
             <div id="file-list">
-                <div style="font-size: 11px; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 1px; margin: 15px 0 5px 5px;">Recentes</div>
-                </div>
+                <div style="font-size: 10px; font-weight: 800; color: var(--text-sec); letter-spacing: 1px; margin-bottom: 10px;">HISTÓRICO</div>
+            </div>
             
             <input type="file" id="file-input" hidden>
-            <button class="btn-disconnect" onclick="disconnect()">Desconectar</button>
+            <button onclick="disconnect()" style="background:none; border:none; color:var(--apple-red); font-weight:700; margin-top:15px; cursor:pointer;">Encerrar Conexão</button>
         </div>
     </div>
 
-    <div id="qr-modal" onclick="closeModals()">
+    <div id="qr-modal" onclick="this.style.display='none'">
         <div id="qrcode"></div>
-        <p style="margin-top:20px; font-weight:600;">Escaneie para conectar</p>
+        <p style="font-weight:700; margin-top:20px;">Seu código de conexão</p>
+        <span style="color:var(--text-sec); font-size:12px;">Toque em qualquer lugar para fechar</span>
     </div>
 
     <div id="scanner-modal">
         <div id="reader"></div>
-        <button onclick="stopScanner()" style="margin-top:20px; padding:15px 30px; border-radius:20px; border:none; background:var(--apple-red); color:white; font-weight:600;">Fechar</button>
+        <button onclick="stopScanner()" style="margin-top:30px; padding:15px 40px; border-radius:20px; border:none; background:var(--apple-red); color:white; font-weight:700;">CANCELAR</button>
     </div>
 
     <script>
@@ -208,8 +193,9 @@
 
         peer.on('open', (id) => {
             dot.classList.add('online');
-            statusText.innerHTML = `ID: <strong>${id}</strong>`;
-            new QRCode(document.getElementById("qrcode"), { text: id, width: 200, height: 200 });
+            statusText.innerHTML = `Online • ID: <strong>${id}</strong>`;
+            document.getElementById("qrcode").innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), { text: id, width: 220, height: 220 });
         });
 
         peer.on('connection', (c) => {
@@ -220,7 +206,7 @@
 
         function setupConnEvents() {
             conn.on('data', (data) => {
-                if(data === "DISCONNECT_EVENT") { resetToHome(); return; }
+                if(data === "DISCONNECT") { resetToHome(); return; }
                 addFileToList(data, 'recebido');
             });
             conn.on('close', resetToHome);
@@ -229,81 +215,26 @@
         function addFileToList(data, type) {
             const blob = new Blob([data.file], { type: data.type });
             const url = URL.createObjectURL(blob);
-            
             const item = document.createElement('div');
             item.className = 'file-item';
             
-            // Lógica de Ícones
             let icon = '📄';
             if(data.type.includes('image')) icon = '🖼️';
             if(data.type.includes('video')) icon = '🎬';
-            if(data.name.endsWith('.apk') || data.name.endsWith('.exe')) icon = '⚙️';
+            if(data.name.endsWith('.apk')) icon = '⚙️';
 
-            item.innerHTML = `
-                <div class="file-icon">${icon}</div>
-                <div class="file-details">
-                    <div class="file-name">${data.name}</div>
-                    <div class="file-meta">${type === 'recebido' ? 'Recebido' : 'Enviado'} • ${data.type}</div>
-                </div>
-            `;
-
+            item.innerHTML = `<div class="file-icon">${icon}</div><div class="file-details"><div class="file-name">${data.name}</div></div>`;
             item.onclick = () => {
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = data.name;
-                // Se for mídia, abre em nova aba. Se for app/arquivo, baixa.
-                if(data.type.includes('image') || data.type.includes('video') || data.type.includes('pdf')) {
-                    window.open(url, '_blank');
-                } else {
-                    a.click();
-                }
+                (data.type.includes('image') || data.type.includes('video')) ? window.open(url, '_blank') : a.click();
             };
-
-            fileList.insertBefore(item, fileList.firstChild.nextSibling);
+            fileList.appendChild(item);
         }
 
-        document.getElementById('file-input').onchange = (e) => {
-            const file = e.target.files[0];
-            if(!file || !conn) return;
-
-            document.getElementById('p-bar').style.display = 'block';
-            document.getElementById('fill').style.width = '100%';
-
-            const dataObj = { file: file, name: file.name, type: file.type };
-            conn.send(dataObj);
-            addFileToList(dataObj, 'enviado');
-
-            setTimeout(() => {
-                document.getElementById('fill').style.width = '0%';
-                setTimeout(() => document.getElementById('p-bar').style.display = 'none', 1000);
-            }, 1500);
-        };
-
-        // Funções de UI mantidas
-        function connectManual() {
-            const id = document.getElementById('manual-id').value;
-            if(!id) return;
-            conn = peer.connect(id);
-            setupConnEvents();
-            initTransferUI();
-        }
-
-        function initTransferUI() {
-            closeModals();
-            document.getElementById('setup-view').style.display = 'none';
-            document.getElementById('transfer-view').style.display = 'block';
-            statusText.innerText = "Conectado";
-        }
-
-        function resetToHome() {
-            document.getElementById('transfer-view').style.display = 'none';
-            document.getElementById('setup-view').style.display = 'block';
-            statusText.innerHTML = `ID Ativo: <strong>${shortId}</strong>`;
-        }
-
-        function disconnect() { if(conn) { conn.send("DISCONNECT_EVENT"); conn.close(); resetToHome(); } }
         function openQR() { document.getElementById('qr-modal').style.display = 'flex'; }
-        function closeModals() { document.getElementById('qr-modal').style.display = 'none'; }
+        
         function openScanner() {
             document.getElementById('scanner-modal').style.display = 'flex';
             window.activeScanner = new Html5Qrcode("reader");
@@ -313,11 +244,44 @@
                 connectManual();
             });
         }
+
         function stopScanner() {
-            if(window.activeScanner) window.activeScanner.stop().then(() => {
+            if(window.activeScanner) {
+                window.activeScanner.stop().then(() => {
+                    document.getElementById('scanner-modal').style.display = 'none';
+                });
+            } else {
                 document.getElementById('scanner-modal').style.display = 'none';
-            });
+            }
         }
+
+        function connectManual() {
+            const id = document.getElementById('manual-id').value;
+            if(!id) return;
+            conn = peer.connect(id);
+            setupConnEvents();
+            initTransferUI();
+        }
+
+        function initTransferUI() {
+            document.getElementById('setup-view').style.display = 'none';
+            document.getElementById('transfer-view').style.display = 'flex';
+            statusText.innerText = "Conectado P2P";
+        }
+
+        function resetToHome() {
+            location.reload(); // Recarrega para limpar estado e peer
+        }
+
+        function disconnect() { if(conn) { conn.send("DISCONNECT"); setTimeout(() => resetToHome(), 500); } }
+
+        document.getElementById('file-input').onchange = (e) => {
+            const file = e.target.files[0];
+            if(!file || !conn) return;
+            const dataObj = { file: file, name: file.name, type: file.type };
+            conn.send(dataObj);
+            addFileToList(dataObj, 'enviado');
+        };
     </script>
 </body>
 </html>
