@@ -75,6 +75,8 @@
             text-align: center;
             box-shadow: 0 20px 60px rgba(0,0,0,0.05);
             transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         h1 { font-size: 32px; font-weight: 700; margin: 0 0 8px; letter-spacing: -1px; }
@@ -124,10 +126,14 @@
 
         .btn-disconnect { background: none; border: none; color: var(--apple-red); font-weight: 600; margin-top: 20px; cursor: pointer; font-size: 14px; }
 
-        #history-section { margin-top: 25px; text-align: left; border-top: 1px solid var(--glass-border); padding-top: 20px; }
-        .history-list { display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; margin-top: 10px; }
-        .history-item { background: #f2f2f7; padding: 12px; border-radius: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: transform 0.2s; }
-        .history-item:active { transform: scale(0.98); background: #e5e5ea; }
+        #history-section, #paired-section { margin-top: 25px; text-align: left; border-top: 1px solid var(--glass-border); padding-top: 20px; }
+        .history-list, .paired-list { display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; margin-top: 10px; }
+        .history-item, .paired-item { background: #f2f2f7; padding: 12px; border-radius: 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: transform 0.2s; }
+        .history-item:active, .paired-item:active { transform: scale(0.98); background: #e5e5ea; }
+        
+        .paired-item { justify-content: space-between; }
+        .device-info { display: flex; align-items: center; gap: 12px; }
+
         .file-icon { font-size: 20px; width: 30px; text-align: center; }
         .file-details { flex: 1; overflow: hidden; }
         .file-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -189,6 +195,11 @@
             </div>
             <input type="text" id="manual-id" maxlength="4" placeholder="0000">
             <button class="btn-connect" onclick="connectManual()">Conectar Dispositivo</button>
+
+            <div id="paired-section">
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-sec);">DISPOSITIVOS SALVOS</span>
+                <div class="paired-list" id="paired-list"></div>
+            </div>
         </div>
 
         <div id="transfer-view" style="display:none;">
@@ -228,29 +239,38 @@
         let peer, conn;
         let html5QrCode;
         let incomingChunks = {}; 
-        const shortId = Math.floor(1000 + Math.random() * 9000).toString();
-        const historyList = document.getElementById('history-list');
+        
+        // RECUPERA ID ANTIGO OU GERA UM NOVO PARA SER PERSISTENTE
+        let myId = localStorage.getItem('aura_my_id') || Math.floor(1000 + Math.random() * 9000).toString();
+        localStorage.setItem('aura_my_id', myId);
 
-        peer = new Peer(shortId);
+        const historyList = document.getElementById('history-list');
+        const pairedList = document.getElementById('paired-list');
+
+        // INICIALIZA PEER
+        peer = new Peer(myId);
 
         peer.on('open', (id) => {
             document.getElementById('dot').classList.add('online');
             document.getElementById('status-text').innerHTML = `ID: <strong>${id}</strong>`;
+            document.getElementById("qrcode").innerHTML = "";
             new QRCode(document.getElementById("qrcode"), { text: id, width: 200, height: 200 });
+            renderPairedDevices();
         });
 
+        // RECEBE CONEXÃO
         peer.on('connection', (c) => {
             conn = c;
+            saveDevice(conn.peer); // Salva quem conectou em mim
             setupConnEvents();
             initTransferUI();
         });
 
-        // FUNÇÃO DE DOWNLOAD OTIMIZADA PARA REDES SOCIAIS
         function triggerDownload(url, name) {
             const a = document.createElement('a');
             a.href = url;
             a.download = name;
-            a.target = '_blank'; // Abre em nova aba se o download direto falhar
+            a.target = '_blank';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -258,6 +278,7 @@
 
         function setupConnEvents() {
             conn.on('data', (data) => {
+                // Só desconecta se receber o evento manual de desconexão
                 if(data === "DISCONNECT_EVENT") return resetToHome();
 
                 if (data.type === 'FILE_START') {
@@ -274,18 +295,16 @@
                     const fileData = incomingChunks[data.name];
                     const blob = new Blob(fileData.chunks, { type: fileData.fileType });
                     const url = URL.createObjectURL(blob);
-                    
                     addItemToHistory(data.name, fileData.fileType, url, 'recebido');
-                    
-                    // Tenta o download automático
                     triggerDownload(url, data.name);
-                    
                     delete incomingChunks[data.name];
                     document.getElementById('file-info').innerText = "Concluído!";
                     setTimeout(() => { document.getElementById('p-bar').style.display = 'none'; }, 2000);
                 }
             });
-            conn.on('close', resetToHome);
+
+            // Se a aba fechar ou cair internet, tentamos manter a UI mas o PeerJS fechará naturalmente.
+            // Removido o resetToHome no 'close' automático para permitir que o usuário tente reconectar sem dar refresh.
         }
 
         document.getElementById('file-input').onchange = (e) => {
@@ -297,7 +316,6 @@
 
             const chunkSize = 16384; 
             let offset = 0;
-
             conn.send({ type: 'FILE_START', name: file.name, fileType: file.type, size: file.size });
 
             const readSlice = (o) => {
@@ -308,10 +326,8 @@
                     offset += chunkSize;
                     const percent = Math.min((offset / file.size) * 100, 100);
                     document.getElementById('fill').style.width = percent + '%';
-
-                    if (offset < file.size) {
-                        readSlice(offset);
-                    } else {
+                    if (offset < file.size) readSlice(offset);
+                    else {
                         conn.send({ type: 'FILE_END', name: file.name });
                         addItemToHistory(file.name, file.type, URL.createObjectURL(file), 'enviado');
                         document.getElementById('file-info').innerText = "Enviado com sucesso!";
@@ -326,19 +342,62 @@
             readSlice(0);
         };
 
+        // GESTÃO DE DISPOSITIVOS PAREADOS
+        function saveDevice(id) {
+            let devices = JSON.parse(localStorage.getItem('aura_devices') || '{}');
+            if(!devices[id]) {
+                const name = prompt("Novo dispositivo detectado! Dê um nome a ele:", "Dispositivo " + id);
+                devices[id] = name || id;
+                localStorage.setItem('aura_devices', JSON.stringify(devices));
+                renderPairedDevices();
+            }
+        }
+
+        function renderPairedDevices() {
+            pairedList.innerHTML = '';
+            let devices = JSON.parse(localStorage.getItem('aura_devices') || '{}');
+            for (let id in devices) {
+                const item = document.createElement('div');
+                item.className = 'paired-item';
+                item.innerHTML = `
+                    <div class="device-info" onclick="connectToId('${id}')">
+                        <div class="file-icon">📱</div>
+                        <div class="file-details">
+                            <div class="file-name">${devices[id]}</div>
+                            <div class="file-meta">ID: ${id}</div>
+                        </div>
+                    </div>
+                    <div style="color:var(--apple-red); font-size:12px;" onclick="forgetDevice('${id}')">Remover</div>
+                `;
+                pairedList.appendChild(item);
+            }
+        }
+
+        function forgetDevice(id) {
+            let devices = JSON.parse(localStorage.getItem('aura_devices') || '{}');
+            delete devices[id];
+            localStorage.setItem('aura_devices', JSON.stringify(devices));
+            renderPairedDevices();
+            event.stopPropagation();
+        }
+
+        function connectToId(id) {
+            conn = peer.connect(id);
+            setupConnEvents();
+            initTransferUI();
+        }
+
         function addItemToHistory(name, type, url, direction) {
             const item = document.createElement('div');
             item.className = 'history-item';
             let icon = '📄';
             if(type.includes('image')) icon = '🖼️';
             else if(type.includes('video')) icon = '🎬';
-            else if(name.endsWith('.apk') || name.endsWith('.exe')) icon = '🤖';
-
             item.innerHTML = `
                 <div class="file-icon">${icon}</div>
                 <div class="file-details">
                     <div class="file-name">${name}</div>
-                    <div class="file-meta">${direction} • ${type || 'app/file'}</div>
+                    <div class="file-meta">${direction} • ${type || 'file'}</div>
                 </div>
             `;
             item.onclick = () => triggerDownload(url, name);
@@ -348,9 +407,8 @@
         function connectManual() {
             const id = document.getElementById('manual-id').value;
             if(!id) return;
-            conn = peer.connect(id);
-            setupConnEvents();
-            initTransferUI();
+            saveDevice(id);
+            connectToId(id);
         }
 
         function initTransferUI() {
@@ -360,10 +418,20 @@
             document.getElementById('status-text').innerText = "Conectado";
         }
 
-        function resetToHome() { location.reload(); }
+        function resetToHome() {
+            document.getElementById('setup-view').style.display = 'block';
+            document.getElementById('transfer-view').style.display = 'none';
+            document.getElementById('status-text').innerHTML = `ID: <strong>${myId}</strong>`;
+            if(conn) conn.close();
+        }
 
         function disconnect() {
-            if(conn) { conn.send("DISCONNECT_EVENT"); setTimeout(() => resetToHome(), 500); }
+            if(conn) { 
+                conn.send("DISCONNECT_EVENT"); 
+                setTimeout(() => resetToHome(), 500); 
+            } else {
+                resetToHome();
+            }
         }
 
         function openQR() { document.getElementById('qr-modal').style.display = 'flex'; }
@@ -372,13 +440,11 @@
         function openScanner() {
             document.getElementById('scanner-modal').style.display = 'flex';
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-            
-            const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-            html5QrCode.start({ facingMode: "environment" }, config, (id) => {
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (id) => {
                 document.getElementById('manual-id').value = id;
                 stopScanner();
                 connectManual();
-            }).catch(err => alert("Erro na câmera. Use HTTPS."));
+            }).catch(err => alert("Erro na câmera."));
         }
 
         function stopScanner() {
@@ -386,8 +452,6 @@
                 html5QrCode.stop().then(() => {
                     document.getElementById('scanner-modal').style.display = 'none';
                 }).catch(() => { document.getElementById('scanner-modal').style.display = 'none'; });
-            } else {
-                document.getElementById('scanner-modal').style.display = 'none';
             }
         }
     </script>
