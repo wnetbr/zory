@@ -72,7 +72,6 @@
             letter-spacing: 0.5px;
         }
         .apple-btn svg { width: 24px; height: 24px; stroke: var(--apple-blue); fill: none; stroke-width: 2.5; transition: transform 0.3s ease; }
-        .apple-btn:hover svg { transform: translateY(-3px); }
         .apple-btn:active { transform: scale(0.95); }
 
         .btn-connect {
@@ -85,17 +84,15 @@
             font-weight: 700;
             font-size: 15px;
             cursor: pointer;
-            box-shadow: 0 8px 20px rgba(0, 122, 255, 0.2);
         }
 
         input[type="text"] {
             width: 100%; background: rgba(0,0,0,0.05); border: 1px solid transparent;
             border-radius: 15px; padding: 15px; text-align: center; font-size: 20px; 
-            font-weight: 700; margin: 10px 0; transition: 0.3s;
+            font-weight: 700; margin: 10px 0;
         }
-        input[type="text"]:focus { background: #fff; border-color: var(--apple-blue); }
 
-        /* LISTA DE ARQUIVOS E CHAT */
+        /* ÁREA DE CONTEÚDO MIXTO */
         #content-area {
             margin-top: 15px;
             text-align: left;
@@ -106,18 +103,20 @@
             flex-direction: column;
             gap: 10px;
         }
-        
-        .msg {
-            padding: 10px 15px;
-            border-radius: 18px;
+
+        /* BALÕES DE CHAT */
+        .chat-bubble {
+            padding: 12px 16px;
+            border-radius: 20px;
             font-size: 14px;
-            max-width: 85%;
-            word-wrap: break-word;
+            max-width: 80%;
+            line-height: 1.4;
             animation: fadeIn 0.3s ease;
         }
-        .msg.sent { background: var(--apple-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .msg.received { background: #e9e9eb; color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .sent { background: var(--apple-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .received { background: #e9e9eb; color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 4px; }
 
+        /* ESTILO ARQUIVO */
         .file-item {
             background: rgba(255,255,255,0.6);
             border: 1px solid var(--glass-border);
@@ -127,33 +126,28 @@
             align-items: center;
             gap: 12px;
             cursor: pointer;
-            animation: fadeIn 0.4s ease;
+            width: 100%;
         }
         .file-icon { font-size: 20px; background: #fff; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
         .file-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
 
-        /* INPUT DE CHAT */
-        .chat-input-container {
+        .chat-input-bar {
             display: flex;
             gap: 8px;
             padding-top: 15px;
-            border-top: 1px solid var(--glass-border);
             margin-top: 10px;
+            border-top: 1px solid var(--glass-border);
         }
-        #chat-msg {
-            flex: 1;
-            background: rgba(0,0,0,0.05);
-            border: none;
-            padding: 12px 15px;
-            border-radius: 20px;
-            font-size: 14px;
+        #message-input {
+            flex: 1; background: rgba(0,0,0,0.05); border: none;
+            border-radius: 20px; padding: 12px 15px; font-size: 14px;
         }
 
         #qr-modal, #scanner-modal {
             display: none; position: fixed; inset: 0; background: #fff;
             z-index: 999; flex-direction: column; align-items: center; justify-content: center;
         }
-        #reader { width: 100% !important; max-width: 350px; border-radius: 20px; overflow: hidden; border: none !important; }
+        #reader { width: 100% !important; max-width: 350px; border-radius: 20px; overflow: hidden; }
         
         .status-dot { width: 8px; height: 8px; background: var(--apple-red); border-radius: 50%; transition: 0.3s; }
         .online { background: #34c759; box-shadow: 0 0 10px #34c759; }
@@ -186,19 +180,19 @@
         </div>
 
         <div id="transfer-view" style="display:none; flex-direction: column; height: 100%;">
-            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                <button class="apple-btn" style="flex: 1; border-style: dashed; border-color: var(--apple-blue);" onclick="document.getElementById('file-input').click()">
-                    <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    <span>ARQUIVO</span>
+            <div style="display: flex; gap: 8px;">
+                <button class="apple-btn" style="flex: 1; border-style: dashed; border-color: var(--apple-blue); flex-direction: row; padding: 10px;" onclick="document.getElementById('file-input').click()">
+                    <svg viewBox="0 0 24 24" style="width:18px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    MIDIA
                 </button>
-                <button onclick="disconnect()" style="background:none; border:none; color:var(--apple-red); font-weight:700; cursor:pointer; font-size: 11px;">ENCERRAR</button>
+                <button onclick="disconnect()" style="background:none; border:none; color:var(--apple-red); font-weight:700; cursor:pointer; font-size: 11px;">SAIR</button>
             </div>
-            
+
             <div id="content-area"></div>
-            
-            <div class="chat-input-container">
-                <input type="text" id="chat-msg" placeholder="Mensagem..." style="margin:0; font-size:14px; text-align:left;">
-                <button class="apple-btn" onclick="sendMessage()" style="padding:10px; border-radius:50%; width:40px; height:40px; background:var(--apple-blue);">
+
+            <div class="chat-input-bar">
+                <input type="text" id="message-input" placeholder="Mensagem...">
+                <button class="apple-btn" onclick="sendTextMessage()" style="padding:10px; border-radius:50%; width:40px; height:40px; background:var(--apple-blue);">
                     <svg viewBox="0 0 24 24" style="stroke:white; width:18px;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                 </button>
             </div>
@@ -209,8 +203,7 @@
 
     <div id="qr-modal" onclick="this.style.display='none'">
         <div id="qrcode"></div>
-        <p style="font-weight:700; margin-top:20px;">Seu código de conexão</p>
-        <span style="color:var(--text-sec); font-size:12px;">Toque em qualquer lugar para fechar</span>
+        <p style="font-weight:700; margin-top:20px;">Código de conexão</p>
     </div>
 
     <div id="scanner-modal">
@@ -230,12 +223,12 @@
         peer.on('open', (id) => {
             dot.classList.add('online');
             statusText.innerHTML = `Online • ID: <strong>${id}</strong>`;
-            document.getElementById("qrcode").innerHTML = "";
-            new QRCode(document.getElementById("qrcode"), { text: id, width: 220, height: 220 });
+            new QRCode(document.getElementById("qrcode"), { text: id, width: 200, height: 200 });
         });
 
-        peer.on('connection', (c) => {
-            conn = c;
+        // Receber conexão
+        peer.on('connection', (incomingConn) => {
+            conn = incomingConn;
             setupConnEvents();
             initTransferUI();
         });
@@ -244,61 +237,78 @@
             conn.on('data', (data) => {
                 if(data === "DISCONNECT") { resetToHome(); return; }
                 
-                if(data.chat) {
-                    addChatMessage(data.chat, 'received');
-                } else {
-                    addFileToList(data, 'recebido');
+                // Lógica de recebimento
+                if (data.type === 'text') {
+                    displayMessage(data.content, 'received');
+                } else if (data.file) {
+                    displayFile(data, 'received');
                 }
             });
             conn.on('close', resetToHome);
         }
 
-        function addChatMessage(text, side) {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `msg ${side === 'sent' ? 'sent' : 'received'}`;
-            msgDiv.innerText = text;
-            contentArea.appendChild(msgDiv);
-            contentArea.scrollTop = contentArea.scrollHeight;
-        }
+        // Funções de Mensagem
+        function sendTextMessage() {
+            const input = document.getElementById('message-input');
+            const msg = input.value.trim();
+            if(!msg || !conn) return;
 
-        function sendMessage() {
-            const input = document.getElementById('chat-msg');
-            const text = input.value.trim();
-            if(!text || !conn) return;
-            
-            conn.send({ chat: text });
-            addChatMessage(text, 'sent');
+            const data = { type: 'text', content: msg };
+            conn.send(data);
+            displayMessage(msg, 'sent');
             input.value = '';
         }
 
-        document.getElementById('chat-msg').addEventListener('keypress', (e) => {
-            if(e.key === 'Enter') sendMessage();
-        });
+        function displayMessage(text, side) {
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${side}`;
+            bubble.innerText = text;
+            contentArea.appendChild(bubble);
+            contentArea.scrollTop = contentArea.scrollHeight;
+        }
 
-        function addFileToList(data, type) {
-            const blob = new Blob([data.file], { type: data.type });
+        // Funções de Arquivo
+        document.getElementById('file-input').onchange = (e) => {
+            const file = e.target.files[0];
+            if(!file || !conn) return;
+            
+            const reader = new FileReader();
+            reader.onload = () => {
+                const dataObj = { 
+                    file: reader.result, 
+                    name: file.name, 
+                    fileType: file.type 
+                };
+                conn.send(dataObj);
+                displayFile(dataObj, 'sent');
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        function displayFile(data, side) {
+            const blob = new Blob([data.file], { type: data.fileType });
             const url = URL.createObjectURL(blob);
             const item = document.createElement('div');
             item.className = 'file-item';
+            item.style.alignSelf = side === 'sent' ? 'flex-end' : 'flex-start';
             
             let icon = '📄';
-            if(data.type.includes('image')) icon = '🖼️';
-            if(data.type.includes('video')) icon = '🎬';
-            if(data.name.endsWith('.apk')) icon = '⚙️';
+            if(data.fileType.includes('image')) icon = '🖼️';
+            if(data.fileType.includes('video')) icon = '🎬';
 
-            item.innerHTML = `<div class="file-icon">${icon}</div><div class="file-details"><div class="file-name">${data.name}</div></div>`;
+            item.innerHTML = `<div class="file-icon">${icon}</div><div class="file-name">${data.name}</div>`;
             item.onclick = () => {
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = data.name;
-                (data.type.includes('image') || data.type.includes('video')) ? window.open(url, '_blank') : a.click();
+                a.click();
             };
             contentArea.appendChild(item);
             contentArea.scrollTop = contentArea.scrollHeight;
         }
 
+        // Sistema de IDs e Scanner
         function openQR() { document.getElementById('qr-modal').style.display = 'flex'; }
-        
         function openScanner() {
             document.getElementById('scanner-modal').style.display = 'flex';
             window.activeScanner = new Html5Qrcode("reader");
@@ -308,42 +318,30 @@
                 connectManual();
             });
         }
-
         function stopScanner() {
-            if(window.activeScanner) {
-                window.activeScanner.stop().then(() => {
-                    document.getElementById('scanner-modal').style.display = 'none';
-                });
-            } else {
-                document.getElementById('scanner-modal').style.display = 'none';
-            }
+            if(window.activeScanner) window.activeScanner.stop().then(() => document.getElementById('scanner-modal').style.display = 'none');
         }
 
         function connectManual() {
             const id = document.getElementById('manual-id').value;
             if(!id) return;
             conn = peer.connect(id);
-            setupConnEvents();
-            initTransferUI();
+            conn.on('open', () => {
+                setupConnEvents();
+                initTransferUI();
+            });
         }
 
         function initTransferUI() {
             document.getElementById('setup-view').style.display = 'none';
             document.getElementById('transfer-view').style.display = 'flex';
-            statusText.innerText = "Conectado P2P";
+            statusText.innerText = "Conectado";
         }
 
         function resetToHome() { location.reload(); }
+        function disconnect() { if(conn) { conn.send("DISCONNECT"); setTimeout(resetToHome, 500); } }
 
-        function disconnect() { if(conn) { conn.send("DISCONNECT"); setTimeout(() => resetToHome(), 500); } }
-
-        document.getElementById('file-input').onchange = (e) => {
-            const file = e.target.files[0];
-            if(!file || !conn) return;
-            const dataObj = { file: file, name: file.name, type: file.type };
-            conn.send(dataObj);
-            addFileToList(dataObj, 'enviado');
-        };
+        document.getElementById('message-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendTextMessage(); });
     </script>
 </body>
 </html>
