@@ -2,22 +2,22 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>iChat P2P - Apple Style</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iChat P2P - Pro</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
-            --apple-bg: rgba(255, 255, 255, 0.8);
             --apple-blue: #007AFF;
-            --glass: blur(25px);
-            --system-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+            --system-bg: #F2F2F7;
+            --glass: rgba(255, 255, 255, 0.8);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--system-font); }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; }
 
         body {
-            background: linear-gradient(150deg, #d2d2d7 0%, #ffffff 100%);
+            background-color: #000;
+            background-image: radial-gradient(circle at top right, #2c2c2e, #000);
             height: 100vh;
             display: flex;
             align-items: center;
@@ -25,229 +25,291 @@
             overflow: hidden;
         }
 
-        .app-container {
+        .iphone-frame {
             width: 100%;
-            max-width: 500px;
-            height: 95vh;
-            background: var(--apple-bg);
-            backdrop-filter: var(--glass);
-            border-radius: 40px;
+            max-width: 400px;
+            height: 90vh;
+            background: var(--system-bg);
+            border-radius: 45px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.12);
-            border: 1px solid rgba(255,255,255,0.4);
             position: relative;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            overflow: hidden;
+            border: 8px solid #1c1c1e;
         }
 
-        /* Tela de Conexão (QR Code) */
-        #connection-screen {
+        /* Tela de Conexão */
+        #connect-layer {
             position: absolute;
             inset: 0;
-            background: white;
-            z-index: 10;
+            background: #fff;
+            z-index: 100;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 40px;
-            text-align: center;
-            border-radius: 40px;
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 30px;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        #qrcode { margin: 25px 0; padding: 15px; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-
-        .btn-connect {
-            background: var(--apple-blue);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 20px;
-            width: 100%;
+        .qr-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
         }
 
-        input.peer-input {
-            width: 100%;
-            padding: 12px;
-            border-radius: 10px;
-            border: 1px solid #ddd;
-            margin-top: 10px;
-            text-align: center;
+        .digit-badge {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--apple-blue);
+            letter-spacing: 5px;
+            margin: 10px 0;
         }
-
-        /* Header */
-        header { padding: 30px 25px 15px; display: flex; align-items: center; gap: 15px; }
-        .avatar { width: 42px; height: 42px; background: #E9E9EB; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
 
         /* Chat */
-        #chat-window {
+        header {
+            padding: 50px 20px 15px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-bottom: 0.5px solid #d1d1d6;
+            text-align: center;
+        }
+
+        #chat-content {
             flex: 1;
-            padding: 20px;
             overflow-y: auto;
+            padding: 20px;
             display: flex;
             flex-direction: column;
+            gap: 12px;
+        }
+
+        .bubble {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 20px;
+            font-size: 16px;
+            line-height: 1.3;
+            position: relative;
+        }
+
+        .me { align-self: flex-end; background: var(--apple-blue); color: #fff; border-bottom-right-radius: 4px; }
+        .them { align-self: flex-start; background: #E9E9EB; color: #000; border-bottom-left-radius: 4px; }
+
+        /* Toolbar */
+        .toolbar {
+            padding: 10px 15px 30px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
             gap: 10px;
         }
 
-        .msg {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 20px;
-            font-size: 15px;
-            word-wrap: break-word;
-        }
-
-        .sent { align-self: flex-end; background: var(--apple-blue); color: white; border-bottom-right-radius: 5px; }
-        .received { align-self: flex-start; background: #E9E9EB; color: black; border-bottom-left-radius: 5px; }
-
-        /* Input Area */
-        .input-bar {
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: rgba(255,255,255,0.6);
-        }
-
-        .text-box {
+        .input-group {
             flex: 1;
-            background: white;
-            border-radius: 22px;
-            padding: 10px 15px;
-            border: 1px solid rgba(0,0,0,0.1);
-            outline: none;
+            background: #fff;
+            border: 0.5px solid #d1d1d6;
+            border-radius: 20px;
+            padding: 8px 12px;
+            display: flex;
         }
 
-        .file-btn { font-size: 24px; color: var(--apple-blue); cursor: pointer; border: none; background: none; }
-        
-        img.preview { max-width: 100%; border-radius: 12px; margin-top: 5px; }
-        .hidden { display: none; }
+        input { border: none; outline: none; flex: 1; font-size: 16px; }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            color: var(--apple-blue);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* Camera View */
+        #camera-preview {
+            display: none;
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            width: 150px;
+            height: 200px;
+            border-radius: 15px;
+            border: 2px solid #fff;
+            object-fit: cover;
+            z-index: 50;
+        }
+
+        canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <div id="connection-screen">
-        <h2 style="font-weight: 700;">Conectar Dispositivo</h2>
-        <p style="color: #8e8e93; font-size: 14px; margin-top: 8px;">Escaneie o QR Code ou digite o ID para parear</p>
+<div class="iphone-frame">
+    <div id="connect-layer">
+        <h2 style="font-size: 24px; margin-bottom: 5px;">Conectar iChat</h2>
+        <p style="color: #8e8e93; font-size: 14px; margin-bottom: 20px;">Use o código ou escaneie</p>
         
-        <div id="qrcode"></div>
-        <p id="my-id-display" style="font-weight: 600; font-size: 12px; background: #f2f2f7; padding: 5px 15px; border-radius: 20px;"></p>
-
-        <div style="width: 100%; border-top: 1px solid #eee; margin-top: 25px; padding-top: 20px;">
-            <input type="text" id="remote-id" class="peer-input" placeholder="ID do outro dispositivo">
-            <button class="btn-connect" onclick="connectToPeer()">Conectar Agora</button>
+        <div class="qr-card" id="qrcode"></div>
+        
+        <div class="digit-badge" id="my-code">...</div>
+        
+        <div style="width: 100%; margin-top: 20px;">
+            <input type="number" id="target-id" placeholder="Código de 3 dígitos do amigo" 
+                   style="width: 100%; padding: 15px; border-radius: 15px; background: #f2f2f7; text-align: center; margin-bottom: 10px;">
+            <button onclick="connectToFriend()" 
+                    style="width: 100%; padding: 15px; border-radius: 15px; background: var(--apple-blue); color: #fff; border: none; font-weight: 600; cursor: pointer;">
+                Entrar no Chat
+            </button>
         </div>
     </div>
 
     <header>
-        <div class="avatar" id="peer-avatar">?</div>
-        <div>
-            <h4 id="status-text">Aguardando conexão...</h4>
-            <span style="font-size: 12px; color: #4cd964;">● P2P Seguro Ativo</span>
-        </div>
+        <h3 id="peer-status">Desconectado</h3>
     </header>
 
-    <div id="chat-window"></div>
+    <div id="chat-content"></div>
 
-    <div class="input-bar">
-        <button class="file-btn" onclick="document.getElementById('file-input').click()">+</button>
-        <input type="file" id="file-input" class="hidden" onchange="sendFile(this.files[0])">
-        <input type="text" id="msg-input" class="text-box" placeholder="iMessage" onkeypress="if(event.key==='Enter') sendText()">
-        <button class="file-btn" style="transform: rotate(-45deg)" onclick="sendText()">▲</button>
+    <video id="camera-preview" autoplay playsinline></video>
+    <canvas id="capture-canvas"></canvas>
+
+    <div class="toolbar">
+        <button class="btn-icon" onclick="toggleCamera()">📸</button>
+        <button class="btn-icon" onclick="document.getElementById('file-input').click()">📁</button>
+        <input type="file" id="file-input" hidden onchange="processFile(this.files[0])">
+        
+        <div class="input-group">
+            <input type="text" id="main-input" placeholder="Mensagem">
+            <button class="btn-icon" onclick="sendText()">↑</button>
+        </div>
     </div>
 </div>
 
 <script>
-    let peer;
-    let conn;
-    const myIdDisplay = document.getElementById('my-id-display');
-    const chatWindow = document.getElementById('chat-window');
-    const msgInput = document.getElementById('msg-input');
+    let peer, conn, localStream;
+    const myCodeEl = document.getElementById('my-code');
+    const chatContent = document.getElementById('chat-content');
+    const cameraPreview = document.getElementById('camera-preview');
 
-    // Inicializar PeerJS
-    peer = new Peer();
+    // Gerar ID de 3 dígitos e iniciar Peer
+    const randomID = Math.floor(100 + Math.random() * 900).toString();
+    peer = new Peer(randomID);
 
     peer.on('open', (id) => {
-        myIdDisplay.innerText = "Seu ID: " + id;
-        new QRCode(document.getElementById("qrcode"), {
-            text: id,
-            width: 180,
-            height: 180
-        });
+        myCodeEl.innerText = id;
+        new QRCode(document.getElementById("qrcode"), { text: id, width: 150, height: 150 });
     });
 
-    // Escutar por conexões recebidas
     peer.on('connection', (connection) => {
         setupConnection(connection);
     });
 
-    function connectToPeer() {
-        const remoteId = document.getElementById('remote-id').value;
-        if (!remoteId) return alert("Digite um ID");
-        const connection = peer.connect(remoteId);
+    peer.on('error', (err) => {
+        if(err.type === 'unavailable-id') {
+            alert("Código em uso, recarregue a página.");
+        } else {
+            console.error(err);
+        }
+    });
+
+    function connectToFriend() {
+        const id = document.getElementById('target-id').value;
+        if(id.length !== 3) return alert("Digite 3 dígitos");
+        const connection = peer.connect(id);
         setupConnection(connection);
     }
 
     function setupConnection(connection) {
         conn = connection;
-        
         conn.on('open', () => {
-            document.getElementById('connection-screen').style.transform = 'translateY(-100%)';
-            document.getElementById('status-text').innerText = "Conectado";
-            addMessage("Sistema", "Conexão estabelecida com sucesso!", "received");
+            document.getElementById('connect-layer').style.transform = 'translateY(-100%)';
+            document.getElementById('peer-status').innerText = "Conectado com: " + conn.peer;
         });
 
         conn.on('data', (data) => {
-            if (data.type === 'text') {
-                addMessage("Outro", data.content, "received");
-            } else if (data.type === 'file') {
-                const blob = new Blob([data.file], { type: data.fileType });
-                const url = URL.createObjectURL(blob);
-                if (data.fileType.startsWith('image/')) {
-                    addMessage("Outro", `<img src="${url}" class="preview"><br>${data.fileName}`, "received");
-                } else {
-                    addMessage("Outro", `<a href="${url}" download="${data.fileName}" style="color:inherit">📁 Arquivo: ${data.fileName}</a>`, "received");
-                }
+            handleIncomingData(data);
+        });
+    }
+
+    // Funcionalidade de Câmera
+    async function toggleCamera() {
+        if (!localStream) {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+                cameraPreview.srcObject = localStream;
+                cameraPreview.style.display = 'block';
+            } catch (err) {
+                alert("Erro ao acessar câmera: " + err.message);
             }
-        });
-    }
-
-    function sendText() {
-        const text = msgInput.value;
-        if (!text || !conn) return;
-        conn.send({ type: 'text', content: text });
-        addMessage("Você", text, "sent");
-        msgInput.value = "";
-    }
-
-    function sendFile(file) {
-        if (!file || !conn) return;
-        
-        conn.send({
-            type: 'file',
-            file: file,
-            fileType: file.type,
-            fileName: file.name
-        });
-
-        if (file.type.startsWith('image/')) {
-            const url = URL.createObjectURL(file);
-            addMessage("Você", `<img src="${url}" class="preview"><br>${file.name}`, "sent");
         } else {
-            addMessage("Você", `📁 Arquivo enviado: ${file.name}`, "sent");
+            captureImage();
         }
     }
 
-    function addMessage(user, content, type) {
+    function captureImage() {
+        const canvas = document.getElementById('capture-canvas');
+        canvas.width = cameraPreview.videoWidth;
+        canvas.height = cameraPreview.videoHeight;
+        canvas.getContext('2d').drawImage(cameraPreview, 0, 0);
+        
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        sendData({ type: 'img', content: dataUrl });
+        addBubble(dataUrl, 'me', true);
+        
+        // Fechar câmera após capturar
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+        cameraPreview.style.display = 'none';
+    }
+
+    function sendText() {
+        const val = document.getElementById('main-input').value;
+        if(!val || !conn) return;
+        sendData({ type: 'text', content: val });
+        addBubble(val, 'me');
+        document.getElementById('main-input').value = "";
+    }
+
+    function processFile(file) {
+        if(!file || !conn) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            sendData({
+                type: 'file',
+                content: e.target.result,
+                name: file.name,
+                mime: file.type
+            });
+            addBubble(`📁 Enviado: ${file.name}`, 'me');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function sendData(obj) {
+        if(conn && conn.open) conn.send(obj);
+    }
+
+    function handleIncomingData(data) {
+        if(data.type === 'text') addBubble(data.content, 'them');
+        if(data.type === 'img') addBubble(data.content, 'them', true);
+        if(data.type === 'file') {
+            const html = `<a href="${data.content}" download="${data.name}" style="color:inherit">📦 Baixar: ${data.name}</a>`;
+            addBubble(html, 'them');
+        }
+    }
+
+    function addBubble(content, side, isImg = false) {
         const div = document.createElement('div');
-        div.className = `msg ${type}`;
-        div.innerHTML = content;
-        chatWindow.appendChild(div);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
+        div.className = `bubble ${side}`;
+        if(isImg) {
+            div.innerHTML = `<img src="${content}" style="width:100%; border-radius:12px;">`;
+        } else {
+            div.innerHTML = content;
+        }
+        chatContent.appendChild(div);
+        chatContent.scrollTop = chatContent.scrollHeight;
     }
 </script>
 
