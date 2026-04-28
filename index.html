@@ -183,7 +183,8 @@
 
             <div style="background: var(--apple-card); padding: 20px; border-radius: 20px;">
                 <p style="margin-top: 0; font-weight: 600;">Adicionar por Código</p>
-                <input type="text" id="manual-id-input" class="apple-input" placeholder="Digite o código de 4 dígitos" maxlength="4">
+                <input type="text" id="contact-name-input" class="apple-input" placeholder="Nome do contato, como aparecerá para você">
+                <input type="text" id="manual-id-input" class="apple-input" placeholder="Digite o código de 4 dígitos" maxlength="4" inputmode="numeric" pattern="[0-9]*">
                 <button class="apple-btn" onclick="addContactManual()" style="width: 100%;">Conectar</button>
             </div>
         </div>
@@ -204,6 +205,7 @@
                 </div>
             </div>
             <div style="display: flex; gap: 18px;">
+                <button class="icon-btn" onclick="showContactProfile(activeChatId)" style="background:none; border:none; color:var(--apple-blue); font-size: 22px;" title="Ver perfil"><i class="fas fa-circle-info"></i></button>
                 <button class="icon-btn" onclick="startCall(true)" style="background:none; border:none; color:var(--apple-blue); font-size: 22px;"><i class="fas fa-video"></i></button>
                 <button class="icon-btn" onclick="startCall(false)" style="background:none; border:none; color:var(--apple-blue); font-size: 22px;"><i class="fas fa-phone"></i></button>
             </div>
@@ -236,6 +238,17 @@
         </div>
     </div>
 
+    <!-- Contact Profile Modal -->
+    <div class="modal-overlay" id="contact-profile-modal">
+        <div class="modal-content">
+            <img id="contact-profile-pic-modal" class="profile-pic-large" style="width: 90px; height: 90px;" src="https://www.w3schools.com/howto/img_avatar.png">
+            <h3 id="contact-profile-name-modal" style="margin: 10px 0 5px 0;">Usuário</h3>
+            <p id="contact-profile-id-modal" style="color: var(--apple-gray); margin: 0 0 8px 0;">Código: ----</p>
+            <p id="contact-profile-saved-name-modal" style="color: var(--apple-gray); margin: 0 0 20px 0; font-size: 14px;"></p>
+            <button class="apple-btn" onclick="document.getElementById('contact-profile-modal').style.display='none'" style="width: 100%;">Fechar</button>
+        </div>
+    </div>
+
     <!-- Incoming Call Modal -->
     <div class="modal-overlay" id="incoming-call-modal">
         <div class="modal-content">
@@ -252,6 +265,8 @@
     <script>
         let peer, conn, currentCall, localStream, myId;
         let contacts = JSON.parse(localStorage.getItem('p2p_contacts_v4') || '{}');
+        let deletedContacts = JSON.parse(localStorage.getItem('p2p_deleted_contacts_v4') || '{}');
+        let messageHistory = JSON.parse(localStorage.getItem('p2p_messages_v4') || '{}');
         let myProfile = JSON.parse(localStorage.getItem('p2p_profile_v4') || '{"name": "Usuário", "pic": ""}');
         let activeChatId = null;
         let html5QrCode;
@@ -264,13 +279,15 @@
             myId = savedId || Math.floor(1000 + Math.random() * 9000).toString();
             localStorage.setItem('p2p_my_id_v4', myId);
 
+            Object.keys(contacts).forEach(id => contacts[id] = normalizeContact(id, contacts[id]));
+            saveContacts();
+
             peer = new Peer("apple-p2p-v4-" + myId);
             
             peer.on('open', (id) => {
                 document.getElementById('my-id-display').innerText = myId;
                 generateQR(myId);
                 updateContactsList();
-                // Check status of all contacts every 10 seconds
                 setInterval(refreshAllStatus, 10000);
             });
 
@@ -281,8 +298,8 @@
             peer.on('call', (call) => {
                 currentCall = call;
                 const id = call.peer.replace('apple-p2p-v4-', '');
-                const contact = contacts[id] || { name: "Desconhecido", pic: "" };
-                document.getElementById('caller-name').innerText = contact.name;
+                const contact = contacts[id] || { name: "Desconhecido", pic: "", id: id };
+                document.getElementById('caller-name').innerText = getContactDisplayName(id, contact);
                 document.getElementById('caller-pic').src = contact.pic || 'https://www.w3schools.com/howto/img_avatar.png';
                 document.getElementById('incoming-call-modal').style.display = 'flex';
             });
@@ -296,7 +313,6 @@
                 }
             });
 
-            // Load Profile
             document.getElementById('username-input').value = myProfile.name;
             if(myProfile.pic) document.getElementById('my-profile-pic-display').src = myProfile.pic;
         }
@@ -304,6 +320,64 @@
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
+        }
+
+        // --- HELPERS ---
+        function saveContacts() {
+            localStorage.setItem('p2p_contacts_v4', JSON.stringify(contacts));
+        }
+
+        function saveDeletedContacts() {
+            localStorage.setItem('p2p_deleted_contacts_v4', JSON.stringify(deletedContacts));
+        }
+
+        function saveMessages() {
+            localStorage.setItem('p2p_messages_v4', JSON.stringify(messageHistory));
+        }
+
+        function normalizeContact(id, c) {
+            c = c || {};
+            return {
+                id: c.id || id,
+                name: c.name || c.customName || c.profileName || ("Amigo " + id),
+                customName: c.customName || c.name || "",
+                profileName: c.profileName || "",
+                pic: c.pic || ""
+            };
+        }
+
+        function getContactDisplayName(id, c) {
+            c = normalizeContact(id, c);
+            return c.customName || c.name || c.profileName || ("Amigo " + id);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
+        }
+
+        function parseConnectionCode(raw) {
+            const text = String(raw || '').trim();
+            try {
+                const data = JSON.parse(text);
+                if(data && data.id) return { id: String(data.id).replace(/\D/g, '').slice(0, 4), name: data.name || '' };
+            } catch(e) {}
+            return { id: text.replace(/\D/g, '').slice(0, 4), name: '' };
+        }
+
+        function rememberMessage(id, content, type) {
+            if(!id) return;
+            if(!messageHistory[id]) messageHistory[id] = [];
+            messageHistory[id].push({ content, type, time: Date.now() });
+            if(messageHistory[id].length > 300) messageHistory[id] = messageHistory[id].slice(-300);
+            saveMessages();
+        }
+
+        function renderMessages(id) {
+            const container = document.getElementById('messages');
+            container.innerHTML = '';
+            (messageHistory[id] || []).forEach(m => addMessage(m.content, m.type, false));
         }
 
         // --- PROFILE LOGIC ---
@@ -324,6 +398,7 @@
                 myProfile.pic = reader.result;
                 document.getElementById('my-profile-pic-display').src = reader.result;
                 localStorage.setItem('p2p_profile_v4', JSON.stringify(myProfile));
+                if(conn && conn.open) conn.send({type: 'profile_sync', profile: myProfile});
             };
             reader.readAsDataURL(file);
         }
@@ -332,26 +407,27 @@
         function updateContactsList() {
             const list = document.getElementById('contacts-list');
             list.innerHTML = '';
-            const sortedIds = Object.keys(contacts).sort();
+            const sortedIds = Object.keys(contacts).filter(id => !deletedContacts[id]).sort();
             
             if(sortedIds.length === 0) {
-                list.innerHTML = `<div style="text-align:center; padding:50px; color:var(--apple-gray);">Nenhum contato ainda.<br>Clique no + para adicionar.</div>`;
+                list.innerHTML = `<div style=\"text-align:center; padding:50px; color:var(--apple-gray);\">Nenhum contato ainda.<br>Clique no + para adicionar.</div>`;
                 return;
             }
 
             sortedIds.forEach(id => {
-                const c = contacts[id];
+                const c = contacts[id] = normalizeContact(id, contacts[id]);
                 const div = document.createElement('div');
                 div.className = 'contact-item';
                 div.onclick = () => openChat(id);
                 div.innerHTML = `
                     <img class="profile-pic" src="${c.pic || 'https://www.w3schools.com/howto/img_avatar.png'}">
                     <div class="contact-info">
-                        <div class="contact-name">${c.name}</div>
+                        <div class="contact-name">${escapeHtml(getContactDisplayName(id, c))}</div>
                         <div class="contact-status" id="list-status-${id}">
                             <span class="status-dot status-offline"></span> Offline
                         </div>
                     </div>
+                    <button onclick="showContactProfile('${id}'); event.stopPropagation();" style="background:none; border:none; color:var(--apple-blue); padding:10px;"><i class="fas fa-circle-info"></i></button>
                     <button onclick="deleteContact(event, '${id}')" style="background:none; border:none; color:var(--apple-red); padding:10px;"><i class="fas fa-trash-alt"></i></button>
                 `;
                 list.appendChild(div);
@@ -360,20 +436,35 @@
         }
 
         function refreshAllStatus() {
-            Object.keys(contacts).forEach(id => checkOnlineStatus(id));
+            Object.keys(contacts).forEach(id => {
+                if(!deletedContacts[id]) checkOnlineStatus(id);
+            });
         }
 
         function checkOnlineStatus(id) {
+            if(!peer || peer.destroyed || deletedContacts[id]) return;
             const tempConn = peer.connect("apple-p2p-v4-" + id);
+            let done = false;
             let timeout = setTimeout(() => {
-                tempConn.close();
+                if(done) return;
+                done = true;
+                try { tempConn.close(); } catch(e) {}
                 updateStatusUI(id, false);
             }, 3000);
 
             tempConn.on('open', () => {
+                if(done) return;
+                done = true;
                 clearTimeout(timeout);
                 updateStatusUI(id, true);
-                tempConn.close();
+                try { tempConn.send({type: 'status_probe'}); } catch(e) {}
+                setTimeout(() => { try { tempConn.close(); } catch(e) {} }, 120);
+            });
+            tempConn.on('error', () => {
+                if(done) return;
+                done = true;
+                clearTimeout(timeout);
+                updateStatusUI(id, false);
             });
         }
 
@@ -394,9 +485,27 @@
             e.stopPropagation();
             if(confirm("Deseja realmente excluir este contato?")) {
                 delete contacts[id];
-                localStorage.setItem('p2p_contacts_v4', JSON.stringify(contacts));
+                deletedContacts[id] = Date.now();
+                saveContacts();
+                saveDeletedContacts();
+                if(activeChatId === id) {
+                    activeChatId = null;
+                    if(conn) conn.close();
+                    showScreen('main-screen');
+                }
                 updateContactsList();
             }
+        }
+
+        function showContactProfile(id) {
+            if(!id || !contacts[id]) return;
+            const c = normalizeContact(id, contacts[id]);
+            document.getElementById('contact-profile-pic-modal').src = c.pic || 'https://www.w3schools.com/howto/img_avatar.png';
+            document.getElementById('contact-profile-name-modal').innerText = getContactDisplayName(id, c);
+            document.getElementById('contact-profile-id-modal').innerText = 'Código: ' + id;
+            const originalName = c.profileName && c.profileName !== getContactDisplayName(id, c) ? ('Nome do perfil: ' + c.profileName) : '';
+            document.getElementById('contact-profile-saved-name-modal').innerText = originalName;
+            document.getElementById('contact-profile-modal').style.display = 'flex';
         }
 
         // --- SCANNER LOGIC ---
@@ -407,7 +516,10 @@
             html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
                 (decodedText) => {
                     stopScanner();
-                    addContact(decodedText);
+                    const parsed = parseConnectionCode(decodedText);
+                    let name = document.getElementById('contact-name-input').value.trim() || parsed.name;
+                    if(!name) name = prompt('Digite o nome deste contato:') || '';
+                    addContact(parsed.id, name);
                 },
                 (errorMessage) => {}
             ).catch(err => {
@@ -425,119 +537,225 @@
         }
 
         function addContactManual() {
-            const id = document.getElementById('manual-id-input').value;
-            if(id.length === 4) addContact(id);
+            const id = document.getElementById('manual-id-input').value.replace(/\D/g, '').slice(0, 4);
+            const name = document.getElementById('contact-name-input').value.trim();
+            if(/^\d{4}$/.test(id)) addContact(id, name);
             else alert("O código deve ter 4 dígitos.");
         }
 
-        function addContact(id) {
+        function addContact(id, name) {
+            id = String(id || '').replace(/\D/g, '').slice(0, 4);
+            if(!/^\d{4}$/.test(id)) {
+                alert("Código inválido. Use exatamente 4 dígitos.");
+                return;
+            }
             if(id === myId) {
                 alert("Você não pode adicionar a si mesmo.");
                 return;
             }
-            if(!contacts[id]) {
-                contacts[id] = { name: "Amigo " + id, pic: "", id: id };
-                localStorage.setItem('p2p_contacts_v4', JSON.stringify(contacts));
-            }
+            delete deletedContacts[id];
+            saveDeletedContacts();
+            const current = normalizeContact(id, contacts[id]);
+            const chosenName = (name || '').trim() || current.customName || current.profileName || ("Amigo " + id);
+            contacts[id] = {
+                id: id,
+                name: chosenName,
+                customName: chosenName,
+                profileName: current.profileName || '',
+                pic: current.pic || ''
+            };
+            saveContacts();
+            document.getElementById('manual-id-input').value = '';
+            document.getElementById('contact-name-input').value = '';
             updateContactsList();
             showScreen('main-screen');
             openChat(id);
         }
 
         // --- CHAT LOGIC ---
-        function openChat(id) {
+        function openChat(id, existingConn) {
+            if(!contacts[id] || deletedContacts[id]) return;
             activeChatId = id;
-            const c = contacts[id];
-            document.getElementById('chat-username').innerText = c.name;
+            const c = contacts[id] = normalizeContact(id, contacts[id]);
+            document.getElementById('chat-username').innerText = getContactDisplayName(id, c);
             document.getElementById('chat-profile-pic').src = c.pic || 'https://www.w3schools.com/howto/img_avatar.png';
-            document.getElementById('messages').innerHTML = '';
+            renderMessages(id);
             showScreen('chat-screen');
 
+            if(existingConn) {
+                if(conn && conn !== existingConn) conn.close();
+                conn = existingConn;
+                setupConnectionHandlers(conn);
+                return;
+            }
+
+            if(conn && conn.open && conn.peer === "apple-p2p-v4-" + id) return;
             if(conn) conn.close();
-            conn = peer.connect("apple-p2p-v4-" + id);
+            conn = peer.connect("apple-p2p-v4-" + id, { reliable: true });
             setupConnectionHandlers(conn);
         }
 
         function handleIncomingConnection(c) {
             const id = c.peer.replace('apple-p2p-v4-', '');
-            if(!contacts[id]) {
-                contacts[id] = { name: "Novo Amigo", pic: "", id: id };
-                localStorage.setItem('p2p_contacts_v4', JSON.stringify(contacts));
-                updateContactsList();
-            }
-            conn = c;
-            setupConnectionHandlers(c);
-            if(activeChatId !== id) openChat(id);
+            let firstDataHandled = false;
+
+            c.on('data', data => {
+                if(!firstDataHandled) {
+                    firstDataHandled = true;
+                    if(data && data.type === 'status_probe') {
+                        try { c.close(); } catch(e) {}
+                        return;
+                    }
+                    if(deletedContacts[id] && activeChatId !== id) {
+                        try { c.close(); } catch(e) {}
+                        return;
+                    }
+                    if(!contacts[id]) {
+                        contacts[id] = normalizeContact(id, { name: "Novo Amigo", customName: "Novo Amigo" });
+                        saveContacts();
+                        updateContactsList();
+                    }
+                    if(activeChatId !== id) openChat(id, c);
+                    else {
+                        if(conn && conn !== c) conn.close();
+                        conn = c;
+                        setupConnectionHandlers(c);
+                    }
+                }
+                processIncomingData(c, data);
+            });
+
+            c.on('open', () => {
+                if(activeChatId === id) updateStatusUI(id, true);
+            });
+            c.on('close', () => {
+                if(activeChatId === id) updateStatusUI(id, false);
+            });
         }
 
         function setupConnectionHandlers(c) {
+            if(!c || c._handlersReady) return;
+            c._handlersReady = true;
             c.on('open', () => {
-                updateStatusUI(activeChatId, true);
+                const id = c.peer.replace('apple-p2p-v4-', '');
+                updateStatusUI(id, true);
                 c.send({type: 'profile_sync', profile: myProfile});
             });
-            c.on('data', data => {
-                if(data.type === 'profile_sync') {
-                    const id = c.peer.replace('apple-p2p-v4-', '');
-                    contacts[id].name = data.profile.name;
-                    contacts[id].pic = data.profile.pic;
-                    localStorage.setItem('p2p_contacts_v4', JSON.stringify(contacts));
-                    if(activeChatId === id) {
-                        document.getElementById('chat-username').innerText = data.profile.name;
-                        document.getElementById('chat-profile-pic').src = data.profile.pic || 'https://www.w3schools.com/howto/img_avatar.png';
-                    }
-                    updateContactsList();
-                } else if(data.type === 'text') {
-                    addMessage(data.content, 'them');
-                } else if(data.type === 'file') {
-                    const blob = new Blob([data.payload], {type: data.mime});
-                    const url = URL.createObjectURL(blob);
-                    if(data.mime.startsWith('image/')) addMessage(`<img src="${url}" onclick="window.open('${url}')">`, 'them');
-                    else if(data.mime.startsWith('video/')) addMessage(`<video controls src="${url}"></video>`, 'them');
-                    else if(data.mime.startsWith('audio/')) addMessage(`<audio controls src="${url}"></audio>`, 'them');
-                    else addMessage(`<a href="${url}" download="${data.name}" style="color:inherit; text-decoration:none; display:flex; align-items:center; gap:10px;"><i class="fas fa-file-alt" style="font-size:24px;"></i> ${data.name}</a>`, 'them');
+            c.on('data', data => processIncomingData(c, data));
+            c.on('close', () => {
+                if(activeChatId === c.peer.replace('apple-p2p-v4-', '')) {
+                    updateStatusUI(activeChatId, false);
                 }
             });
-            c.on('close', () => {
+            c.on('error', () => {
                 if(activeChatId === c.peer.replace('apple-p2p-v4-', '')) {
                     updateStatusUI(activeChatId, false);
                 }
             });
         }
 
+        function processIncomingData(c, data) {
+            if(!data || data.type === 'status_probe') return;
+            const id = c.peer.replace('apple-p2p-v4-', '');
+            if(deletedContacts[id] && activeChatId !== id) return;
+
+            if(!contacts[id]) {
+                contacts[id] = normalizeContact(id, { name: "Novo Amigo", customName: "Novo Amigo" });
+                saveContacts();
+            }
+
+            if(data.type === 'profile_sync') {
+                contacts[id] = normalizeContact(id, contacts[id]);
+                contacts[id].profileName = data.profile.name || contacts[id].profileName || '';
+                contacts[id].pic = data.profile.pic || contacts[id].pic || '';
+                contacts[id].name = contacts[id].customName || contacts[id].profileName || ("Amigo " + id);
+                saveContacts();
+                if(activeChatId === id) {
+                    document.getElementById('chat-username').innerText = getContactDisplayName(id, contacts[id]);
+                    document.getElementById('chat-profile-pic').src = contacts[id].pic || 'https://www.w3schools.com/howto/img_avatar.png';
+                }
+                updateContactsList();
+            } else if(data.type === 'text') {
+                const safe = escapeHtml(data.content);
+                rememberMessage(id, safe, 'them');
+                if(activeChatId === id) addMessage(safe, 'them', false);
+            } else if(data.type === 'file') {
+                const blob = new Blob([data.payload], {type: data.mime});
+                const url = URL.createObjectURL(blob);
+                let html = '';
+                if(data.mime.startsWith('image/')) html = `<img src="${url}" onclick="window.open('${url}')">`;
+                else if(data.mime.startsWith('video/')) html = `<video controls src="${url}"></video>`;
+                else if(data.mime.startsWith('audio/')) html = `<audio controls src="${url}"></audio>`;
+                else html = `<a href="${url}" download="${escapeHtml(data.name)}" style="color:inherit; text-decoration:none; display:flex; align-items:center; gap:10px;"><i class="fas fa-file-alt" style="font-size:24px;"></i> ${escapeHtml(data.name)}</a>`;
+                rememberMessage(id, html, 'them');
+                if(activeChatId === id) addMessage(html, 'them', false);
+            }
+        }
+
+        function ensureConnection(callback) {
+            if(conn && conn.open && activeChatId && conn.peer === "apple-p2p-v4-" + activeChatId) {
+                callback(conn);
+                return;
+            }
+            if(!activeChatId) return;
+            if(conn) conn.close();
+            conn = peer.connect("apple-p2p-v4-" + activeChatId, { reliable: true });
+            setupConnectionHandlers(conn);
+            conn.on('open', () => callback(conn));
+            conn.on('error', () => alert('Não foi possível conectar. Verifique se o contato está online.'));
+        }
+
         function sendMessage() {
             const input = document.getElementById('message-input');
             const text = input.value.trim();
-            if(!text || !conn) return;
-            conn.send({type: 'text', content: text});
-            addMessage(text, 'me');
+            if(!text || !activeChatId) return;
+            const safe = escapeHtml(text);
             input.value = '';
+            ensureConnection((openConn) => {
+                openConn.send({type: 'text', content: text});
+                rememberMessage(activeChatId, safe, 'me');
+                addMessage(safe, 'me', false);
+            });
         }
 
-        function addMessage(content, type) {
+        function addMessage(content, type, save = true) {
             const div = document.createElement('div');
             div.className = `message ${type}`;
             div.innerHTML = content;
             const container = document.getElementById('messages');
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
+            if(save && activeChatId) rememberMessage(activeChatId, content, type);
         }
 
         function sendFile() {
             const file = document.getElementById('file-input').files[0];
-            if(!file || !conn) return;
+            if(!file || !activeChatId) return;
             const reader = new FileReader();
             reader.onload = () => {
-                conn.send({type: 'file', name: file.name, mime: file.type, payload: reader.result});
-                const url = URL.createObjectURL(file);
-                if(file.type.startsWith('image/')) addMessage(`<img src="${url}">`, 'me');
-                else addMessage(`<i class="fas fa-file"></i> ${file.name}`, 'me');
+                ensureConnection((openConn) => {
+                    openConn.send({type: 'file', name: file.name, mime: file.type, payload: reader.result});
+                    const url = URL.createObjectURL(file);
+                    let html = '';
+                    if(file.type.startsWith('image/')) html = `<img src="${url}">`;
+                    else if(file.type.startsWith('video/')) html = `<video controls src="${url}"></video>`;
+                    else if(file.type.startsWith('audio/')) html = `<audio controls src="${url}"></audio>`;
+                    else html = `<i class="fas fa-file"></i> ${escapeHtml(file.name)}`;
+                    rememberMessage(activeChatId, html, 'me');
+                    addMessage(html, 'me', false);
+                });
             };
             reader.readAsArrayBuffer(file);
+            document.getElementById('file-input').value = '';
         }
 
         // --- CALL LOGIC ---
         async function startCall(video) {
             try {
+                if(!conn || !conn.peer) {
+                    alert('Abra um contato online antes de iniciar a chamada.');
+                    return;
+                }
                 localStream = await navigator.mediaDevices.getUserMedia({video: video, audio: true});
                 document.getElementById('local-video').srcObject = localStream;
                 document.getElementById('video-call-overlay').style.display = 'flex';
@@ -579,13 +797,17 @@
         }
 
         function toggleMute() {
+            if(!localStream) return;
             const audioTrack = localStream.getAudioTracks()[0];
+            if(!audioTrack) return;
             audioTrack.enabled = !audioTrack.enabled;
             document.getElementById('call-mute-icon').className = audioTrack.enabled ? 'fas fa-microphone' : 'fas fa-microphone-slash';
         }
 
         function toggleCamera() {
+            if(!localStream) return;
             const videoTrack = localStream.getVideoTracks()[0];
+            if(!videoTrack) return;
             videoTrack.enabled = !videoTrack.enabled;
             document.getElementById('call-camera-icon').className = videoTrack.enabled ? 'fas fa-video' : 'fas fa-video-slash';
         }
@@ -594,6 +816,7 @@
         const voiceBtn = document.getElementById('voice-btn');
         voiceBtn.onmousedown = async () => {
             try {
+                if(!activeChatId) return;
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
@@ -602,10 +825,15 @@
                     const blob = new Blob(audioChunks, { type: 'audio/ogg; codecs=opus' });
                     const reader = new FileReader();
                     reader.onload = () => {
-                        conn.send({type: 'file', name: 'audio.ogg', mime: 'audio/ogg', payload: reader.result});
-                        addMessage(`<audio controls src="${URL.createObjectURL(blob)}"></audio>`, 'me');
+                        ensureConnection((openConn) => {
+                            openConn.send({type: 'file', name: 'audio.ogg', mime: 'audio/ogg', payload: reader.result});
+                            const html = `<audio controls src="${URL.createObjectURL(blob)}"></audio>`;
+                            rememberMessage(activeChatId, html, 'me');
+                            addMessage(html, 'me', false);
+                        });
                     };
                     reader.readAsArrayBuffer(blob);
+                    stream.getTracks().forEach(t => t.stop());
                 };
                 mediaRecorder.start();
                 document.getElementById('recording-ui').style.display = 'flex';
@@ -617,6 +845,8 @@
                 document.getElementById('recording-ui').style.display = 'none';
             }
         };
+        voiceBtn.ontouchstart = (e) => { e.preventDefault(); voiceBtn.onmousedown(); };
+        voiceBtn.ontouchend = (e) => { e.preventDefault(); voiceBtn.onmouseup(); };
 
         function generateQR(text) {
             const qr = qrcode(0, 'M');
