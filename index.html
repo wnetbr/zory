@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iMessage P2P</title>
+    <title>iMessage P2P Ultra</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
@@ -16,6 +17,9 @@
             --apple-text: #000000;
             --apple-bubble-me: #007AFF;
             --apple-bubble-them: #E9E9EB;
+            --apple-red: #FF3B30;
+            --apple-green: #34C759;
+            --apple-light-gray: #D1D1D6;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -24,512 +28,606 @@
                 --apple-card: #1C1C1E;
                 --apple-text: #FFFFFF;
                 --apple-bubble-them: #262629;
+                --apple-light-gray: #3A3A3C;
             }
         }
 
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { margin: 0; background-color: var(--apple-bg); color: var(--apple-text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        body {
-            margin: 0;
-            background-color: var(--apple-bg);
-            color: var(--apple-text);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
+        /* Screens */
+        .screen { display: none; flex-direction: column; height: 100%; width: 100%; position: absolute; inset: 0; background: var(--apple-bg); z-index: 1; }
+        .screen.active { display: flex; z-index: 2; }
 
-        /* Setup Screen */
-        #setup-screen {
-            position: fixed;
-            inset: 0;
-            background: var(--apple-bg);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .apple-card {
-            background: var(--apple-card);
-            border-radius: 20px;
-            padding: 30px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .logo {
-            font-size: 60px;
-            margin-bottom: 20px;
-            color: var(--apple-blue);
-        }
-
-        h1 { font-size: 24px; font-weight: 700; margin-bottom: 10px; }
-        p { color: var(--apple-gray); margin-bottom: 30px; }
-
-        .id-box {
-            background: var(--apple-bg);
-            padding: 15px;
-            border-radius: 12px;
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: 5px;
-            margin-bottom: 20px;
-            cursor: pointer;
-        }
-
-        #qrcode {
-            margin: 20px auto;
-            padding: 10px;
-            background: white;
-            border-radius: 10px;
-            display: inline-block;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 15px;
-            border-radius: 12px;
-            border: 1px solid var(--apple-gray);
-            background: var(--apple-bg);
-            color: var(--apple-text);
-            font-size: 16px;
-            margin-bottom: 15px;
-            outline: none;
-            text-align: center;
-        }
-
-        .apple-btn {
-            width: 100%;
-            padding: 15px;
-            border-radius: 12px;
-            border: none;
-            background: var(--apple-blue);
-            color: white;
-            font-size: 17px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        .apple-btn:active { opacity: 0.7; }
-
-        /* Chat Screen */
-        #chat-screen {
-            display: none;
-            flex-direction: column;
-            height: 100%;
-        }
-
+        /* Header */
         header {
             padding: 15px 20px;
             background: rgba(255,255,255,0.8);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-bottom: 0.5px solid var(--apple-gray);
+            border-bottom: 0.5px solid var(--apple-light-gray);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            position: sticky;
-            top: 0;
             z-index: 10;
         }
+        @media (prefers-color-scheme: dark) { header { background: rgba(28,28,30,0.8); } }
 
-        @media (prefers-color-scheme: dark) {
-            header { background: rgba(28,28,30,0.8); }
-        }
+        /* Profile Styles */
+        .profile-pic { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: var(--apple-light-gray); flex-shrink: 0; }
+        .profile-pic-large { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 4px solid var(--apple-blue); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
 
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #4CD964;
-            display: inline-block;
-            margin-right: 5px;
-        }
-
-        #messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .message {
-            max-width: 75%;
-            padding: 10px 16px;
-            border-radius: 20px;
-            font-size: 16px;
-            line-height: 1.4;
-            position: relative;
-            word-wrap: break-word;
-        }
-
-        .message.me {
-            align-self: flex-end;
-            background: var(--apple-bubble-me);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .message.them {
-            align-self: flex-start;
-            background: var(--apple-bubble-them);
-            color: var(--apple-text);
-            border-bottom-left-radius: 4px;
-        }
-
-        .message img, .message video {
-            max-width: 100%;
-            border-radius: 12px;
-            margin-top: 5px;
-        }
-
-        .message .file-link {
+        /* Contacts List */
+        .contact-item {
+            padding: 12px 20px;
+            background: var(--apple-card);
+            border-bottom: 0.5px solid var(--apple-light-gray);
             display: flex;
             align-items: center;
-            gap: 10px;
-            text-decoration: none;
-            color: inherit;
-            font-weight: 500;
+            gap: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
         }
+        .contact-item:active { background: var(--apple-light-gray); }
+        .contact-info { flex: 1; overflow: hidden; }
+        .contact-name { font-weight: 600; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .contact-status { font-size: 13px; color: var(--apple-gray); display: flex; align-items: center; gap: 5px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .status-online { background: var(--apple-green); }
+        .status-offline { background: var(--apple-gray); }
+
+        /* QR Scanner */
+        #reader { width: 100%; max-width: 400px; margin: auto; border-radius: 20px; overflow: hidden; border: none !important; }
+        #reader video { border-radius: 20px; }
+
+        /* Buttons & Inputs */
+        .apple-btn { padding: 14px 20px; border-radius: 14px; border: none; background: var(--apple-blue); color: white; font-weight: 600; cursor: pointer; font-size: 16px; transition: opacity 0.2s; }
+        .apple-btn:active { opacity: 0.7; }
+        .apple-input { padding: 14px; border-radius: 12px; border: 1px solid var(--apple-light-gray); background: var(--apple-card); color: var(--apple-text); width: 100%; margin-bottom: 10px; font-size: 16px; outline: none; }
+        .apple-input:focus { border-color: var(--apple-blue); }
+
+        /* Chat Messages */
+        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; background: var(--apple-bg); }
+        .message { max-width: 75%; padding: 10px 16px; border-radius: 20px; font-size: 16px; line-height: 1.4; position: relative; word-wrap: break-word; }
+        .message.me { align-self: flex-end; background: var(--apple-blue); color: white; border-bottom-right-radius: 4px; }
+        .message.them { align-self: flex-start; background: var(--apple-bubble-them); color: var(--apple-text); border-bottom-left-radius: 4px; }
+        .message img, .message video { max-width: 100%; border-radius: 12px; margin-top: 5px; display: block; }
 
         /* Input Area */
-        .input-area {
-            padding: 10px 15px 30px 15px;
-            background: var(--apple-bg);
-            display: flex;
-            align-items: flex-end;
-            gap: 10px;
-        }
+        .input-area { padding: 10px 15px 30px 15px; background: var(--apple-bg); display: flex; align-items: flex-end; gap: 10px; border-top: 0.5px solid var(--apple-light-gray); }
+        .input-container { flex: 1; background: var(--apple-card); border: 0.5px solid var(--apple-light-gray); border-radius: 25px; padding: 5px 15px; display: flex; align-items: center; }
+        #message-input { flex: 1; border: none; background: transparent; color: var(--apple-text); font-size: 16px; padding: 8px 0; outline: none; }
 
-        .input-container {
-            flex: 1;
-            background: var(--apple-card);
-            border: 0.5px solid var(--apple-gray);
-            border-radius: 25px;
-            padding: 5px 15px;
-            display: flex;
-            align-items: center;
-            min-height: 40px;
-        }
+        /* Video Call Overlay */
+        #video-call-overlay { display: none; position: fixed; inset: 0; background: black; z-index: 1000; flex-direction: column; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; }
+        #local-video { position: absolute; top: 40px; right: 20px; width: 110px; height: 160px; border-radius: 15px; object-fit: cover; border: 2px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .call-controls { position: absolute; bottom: 50px; left: 0; right: 0; display: flex; justify-content: center; gap: 25px; }
+        .call-btn { width: 65px; height: 65px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 28px; color: white; cursor: pointer; transition: transform 0.2s; }
+        .call-btn:active { transform: scale(0.9); }
+        .btn-hangup { background: var(--apple-red); }
+        .btn-action { background: rgba(255,255,255,0.2); backdrop-filter: blur(15px); }
 
-        #message-input {
-            flex: 1;
-            border: none;
-            background: transparent;
-            color: var(--apple-text);
-            font-size: 16px;
-            padding: 8px 0;
-            outline: none;
-            max-height: 100px;
-            overflow-y: auto;
-        }
+        /* Modals */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 500; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--apple-card); border-radius: 20px; padding: 25px; width: 100%; max-width: 350px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
 
-        .icon-btn {
-            background: none;
-            border: none;
-            color: var(--apple-blue);
-            font-size: 22px;
-            cursor: pointer;
-            padding: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .send-btn {
-            background: var(--apple-blue);
-            color: white;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            font-size: 16px;
-        }
-
-        /* Recording Overlay */
-        #recording-ui {
-            display: none;
-            position: absolute;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            align-items: center;
-            gap: 10px;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
+        /* Recording UI */
+        #recording-ui { display: none; position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 12px 24px; border-radius: 25px; align-items: center; gap: 10px; z-index: 50; }
     </style>
 </head>
 <body>
 
-    <!-- Setup Screen -->
-    <div id="setup-screen">
-        <div class="apple-card">
-            <div class="logo"><i class="fab fa-apple"></i></div>
-            <h1>iMessage P2P</h1>
-            <p>Conecte-se de forma privada e segura.</p>
+    <!-- Main Screen (Contacts) -->
+    <div id="main-screen" class="screen active">
+        <header>
+            <h1 style="font-size: 34px; margin: 0; font-weight: 800;">Mensagens</h1>
+            <div style="display: flex; gap: 15px;">
+                <button class="icon-btn" onclick="showScreen('profile-screen')" style="background:none; border:none; color:var(--apple-blue); font-size: 24px;"><i class="fas fa-user-circle"></i></button>
+                <button class="icon-btn" onclick="showScreen('add-contact-screen')" style="background:none; border:none; color:var(--apple-blue); font-size: 24px;"><i class="fas fa-plus-circle"></i></button>
+            </div>
+        </header>
+        <div id="contacts-list" style="flex: 1; overflow-y: auto;">
+            <!-- Contacts will appear here -->
+        </div>
+    </div>
+
+    <!-- Profile Screen -->
+    <div id="profile-screen" class="screen">
+        <header>
+            <button onclick="showScreen('main-screen')" style="background:none; border:none; color:var(--apple-blue); font-size: 17px; font-weight: 500;"><i class="fas fa-chevron-left"></i> Voltar</button>
+            <h2 style="margin: 0; font-size: 17px; font-weight: 600;">Meu Perfil</h2>
+            <div style="width: 60px;"></div>
+        </header>
+        <div style="padding: 30px; display: flex; flex-direction: column; align-items: center; flex: 1; overflow-y: auto;">
+            <div style="position: relative;">
+                <img id="my-profile-pic-display" class="profile-pic-large" src="https://www.w3schools.com/howto/img_avatar.png">
+                <button onclick="document.getElementById('profile-pic-input').click()" style="position: absolute; bottom: 20px; right: 0; background: var(--apple-blue); color: white; border: none; width: 35px; height: 35px; border-radius: 50%;"><i class="fas fa-camera"></i></button>
+            </div>
+            <input type="file" id="profile-pic-input" hidden accept="image/*" onchange="updateProfilePic()">
             
-            <div id="my-id-container">
-                <small style="color: var(--apple-gray)">Seu Código de Conexão</small>
-                <div class="id-box" id="display-id" onclick="copyID()">----</div>
-                <div id="qrcode"></div>
+            <p style="color: var(--apple-gray); margin-bottom: 5px; font-size: 13px; text-transform: uppercase; width: 100%; max-width: 300px;">Nome de Usuário</p>
+            <input type="text" id="username-input" class="apple-input" style="max-width: 300px;" placeholder="Seu nome">
+            <button class="apple-btn" onclick="saveProfile()" style="width: 100%; max-width: 300px; margin-top: 10px;">Salvar Alterações</button>
+
+            <div style="margin-top: 40px; text-align: center; width: 100%; background: var(--apple-card); padding: 20px; border-radius: 20px;">
+                <p style="color: var(--apple-gray); margin-bottom: 10px;">Seu Código de Conexão</p>
+                <div id="my-id-display" style="font-size: 28px; font-weight: 800; letter-spacing: 6px; color: var(--apple-blue); margin-bottom: 15px;">----</div>
+                <div id="qrcode-display" style="background: white; padding: 10px; border-radius: 15px; display: inline-block;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Contact Screen -->
+    <div id="add-contact-screen" class="screen">
+        <header>
+            <button onclick="stopScanner(); showScreen('main-screen')" style="background:none; border:none; color:var(--apple-blue); font-size: 17px;"><i class="fas fa-chevron-left"></i> Voltar</button>
+            <h2 style="margin: 0; font-size: 17px;">Novo Contato</h2>
+            <div style="width: 60px;"></div>
+        </header>
+        <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1; overflow-y: auto;">
+            <div id="reader-container" style="background: black; border-radius: 20px; overflow: hidden; position: relative; aspect-ratio: 1;">
+                <div id="reader"></div>
+                <div id="scanner-placeholder" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; padding: 20px;">
+                    <i class="fas fa-qrcode" style="font-size: 50px; margin-bottom: 15px; opacity: 0.5;"></i>
+                    <p>Clique abaixo para escanear o QR Code do seu amigo</p>
+                </div>
+            </div>
+            <button class="apple-btn" id="start-scan-btn" onclick="startScanner()"><i class="fas fa-camera"></i> Abrir Câmera para Escanear</button>
+            
+            <div style="display: flex; align-items: center; gap: 10px; color: var(--apple-gray);">
+                <hr style="flex: 1; border: none; border-top: 0.5px solid var(--apple-light-gray);">
+                <span>OU</span>
+                <hr style="flex: 1; border: none; border-top: 0.5px solid var(--apple-light-gray);">
             </div>
 
-            <div style="margin-top: 20px;">
-                <input type="text" id="peer-id-input" placeholder="Digite o código de 4 dígitos">
-                <button class="apple-btn" onclick="connectToPeer()">Conectar</button>
+            <div style="background: var(--apple-card); padding: 20px; border-radius: 20px;">
+                <p style="margin-top: 0; font-weight: 600;">Adicionar por Código</p>
+                <input type="text" id="manual-id-input" class="apple-input" placeholder="Digite o código de 4 dígitos" maxlength="4">
+                <button class="apple-btn" onclick="addContactManual()" style="width: 100%;">Conectar</button>
             </div>
         </div>
     </div>
 
     <!-- Chat Screen -->
-    <div id="chat-screen">
+    <div id="chat-screen" class="screen">
         <header>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--apple-gray); display: flex; align-items: center; justify-content: center; color: white;">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div>
-                    <div style="font-weight: 600;" id="chat-with">Conectando...</div>
-                    <div style="font-size: 12px; color: var(--apple-gray);"><span class="status-dot"></span>Online</div>
+            <div style="display: flex; align-items: center; gap: 12px; flex: 1; overflow: hidden;">
+                <button onclick="showScreen('main-screen')" style="background:none; border:none; color:var(--apple-blue); font-size: 20px; padding: 0;"><i class="fas fa-chevron-left"></i></button>
+                <img id="chat-profile-pic" class="profile-pic" src="https://www.w3schools.com/howto/img_avatar.png">
+                <div style="overflow: hidden;">
+                    <div id="chat-username" style="font-weight: 700; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Usuário</div>
+                    <div id="chat-status" style="font-size: 12px; color: var(--apple-gray); display: flex; align-items: center; gap: 4px;">
+                        <span class="status-dot status-offline" id="chat-status-dot"></span>
+                        <span id="chat-status-text">Offline</span>
+                    </div>
                 </div>
             </div>
-            <button class="icon-btn" onclick="location.reload()"><i class="fas fa-phone"></i></button>
+            <div style="display: flex; gap: 18px;">
+                <button class="icon-btn" onclick="startCall(true)" style="background:none; border:none; color:var(--apple-blue); font-size: 22px;"><i class="fas fa-video"></i></button>
+                <button class="icon-btn" onclick="startCall(false)" style="background:none; border:none; color:var(--apple-blue); font-size: 22px;"><i class="fas fa-phone"></i></button>
+            </div>
         </header>
-
         <div id="messages"></div>
-
         <div id="recording-ui">
-            <i class="fas fa-microphone"></i> Gravando áudio...
+            <i class="fas fa-microphone" style="color: var(--apple-red);"></i> Gravando áudio...
         </div>
-
         <div class="input-area">
-            <label class="icon-btn">
-                <i class="fas fa-plus"></i>
+            <label class="icon-btn" style="color:var(--apple-blue); font-size: 26px;">
+                <i class="fas fa-plus-circle"></i>
                 <input type="file" id="file-input" hidden onchange="sendFile()">
             </label>
-            
             <div class="input-container">
                 <input type="text" id="message-input" placeholder="iMessage" autocomplete="off">
-                <button class="icon-btn" id="voice-btn"><i class="fas fa-microphone"></i></button>
+                <button class="icon-btn" id="voice-btn" style="color:var(--apple-blue);"><i class="fas fa-microphone"></i></button>
             </div>
+            <button class="icon-btn" onclick="sendMessage()" style="background:var(--apple-blue); color:white; width:34px; height:34px; border-radius:50%; font-size: 16px;"><i class="fas fa-arrow-up"></i></button>
+        </div>
+    </div>
 
-            <button class="icon-btn send-btn" onclick="sendMessage()"><i class="fas fa-arrow-up"></i></button>
+    <!-- Video Call Overlay -->
+    <div id="video-call-overlay">
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay playsinline muted></video>
+        <div class="call-controls">
+            <button class="call-btn btn-action" onclick="toggleMute()"><i class="fas fa-microphone" id="call-mute-icon"></i></button>
+            <button class="call-btn btn-hangup" onclick="endCall()"><i class="fas fa-phone-slash"></i></button>
+            <button class="call-btn btn-action" onclick="toggleCamera()"><i class="fas fa-video" id="call-camera-icon"></i></button>
+        </div>
+    </div>
+
+    <!-- Incoming Call Modal -->
+    <div class="modal-overlay" id="incoming-call-modal">
+        <div class="modal-content">
+            <img id="caller-pic" class="profile-pic-large" style="width: 80px; height: 80px;" src="https://www.w3schools.com/howto/img_avatar.png">
+            <h3 id="caller-name" style="margin: 10px 0 5px 0;">Amigo</h3>
+            <p style="color: var(--apple-gray); margin-bottom: 25px;">Chamada de vídeo...</p>
+            <div style="display: flex; justify-content: center; gap: 30px;">
+                <button class="call-btn btn-hangup" onclick="rejectCall()"><i class="fas fa-times"></i></button>
+                <button class="call-btn" style="background: var(--apple-green);" onclick="acceptCall()"><i class="fas fa-check"></i></button>
+            </div>
         </div>
     </div>
 
     <script>
-        let peer;
-        let conn;
-        let myId = "";
+        let peer, conn, currentCall, localStream, myId;
+        let contacts = JSON.parse(localStorage.getItem('p2p_contacts_v4') || '{}');
+        let myProfile = JSON.parse(localStorage.getItem('p2p_profile_v4') || '{"name": "Usuário", "pic": ""}');
+        let activeChatId = null;
+        let html5QrCode;
         let mediaRecorder;
         let audioChunks = [];
 
-        // Initialize Peer with a 4-digit ID
-        function initPeer() {
-            // Generate a random 4-digit ID
-            const shortId = Math.floor(1000 + Math.random() * 9000).toString();
-            
-            // We use a prefix to avoid collisions with other PeerJS users
-            const fullId = "apple-p2p-" + shortId;
-            
-            peer = new Peer(fullId);
+        // --- INITIALIZATION ---
+        function init() {
+            const savedId = localStorage.getItem('p2p_my_id_v4');
+            myId = savedId || Math.floor(1000 + Math.random() * 9000).toString();
+            localStorage.setItem('p2p_my_id_v4', myId);
 
+            peer = new Peer("apple-p2p-v4-" + myId);
+            
             peer.on('open', (id) => {
-                myId = shortId;
-                document.getElementById('display-id').innerText = myId;
+                document.getElementById('my-id-display').innerText = myId;
                 generateQR(myId);
+                updateContactsList();
+                // Check status of all contacts every 10 seconds
+                setInterval(refreshAllStatus, 10000);
             });
 
             peer.on('connection', (c) => {
-                if (conn) conn.close();
-                conn = c;
-                setupChat();
+                handleIncomingConnection(c);
+            });
+
+            peer.on('call', (call) => {
+                currentCall = call;
+                const id = call.peer.replace('apple-p2p-v4-', '');
+                const contact = contacts[id] || { name: "Desconhecido", pic: "" };
+                document.getElementById('caller-name').innerText = contact.name;
+                document.getElementById('caller-pic').src = contact.pic || 'https://www.w3schools.com/howto/img_avatar.png';
+                document.getElementById('incoming-call-modal').style.display = 'flex';
             });
 
             peer.on('error', (err) => {
-                if (err.type === 'unavailable-id') {
-                    initPeer(); // Try again if ID taken
-                } else {
-                    alert("Erro: " + err.type);
+                console.error(err);
+                if(err.type === 'unavailable-id') {
+                    myId = Math.floor(1000 + Math.random() * 9000).toString();
+                    localStorage.setItem('p2p_my_id_v4', myId);
+                    location.reload();
                 }
             });
+
+            // Load Profile
+            document.getElementById('username-input').value = myProfile.name;
+            if(myProfile.pic) document.getElementById('my-profile-pic-display').src = myProfile.pic;
         }
 
-        function generateQR(text) {
-            const qr = qrcode(0, 'M');
-            qr.addData(text);
-            qr.make();
-            document.getElementById('qrcode').innerHTML = qr.createImgTag(5);
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
         }
 
-        function copyID() {
-            navigator.clipboard.writeText(myId);
-            const box = document.getElementById('display-id');
-            const original = box.innerText;
-            box.innerText = "COPIADO";
-            setTimeout(() => box.innerText = original, 1000);
+        // --- PROFILE LOGIC ---
+        function saveProfile() {
+            myProfile.name = document.getElementById('username-input').value || "Usuário";
+            localStorage.setItem('p2p_profile_v4', JSON.stringify(myProfile));
+            alert("Perfil atualizado com sucesso!");
+            if(conn && conn.open) {
+                conn.send({type: 'profile_sync', profile: myProfile});
+            }
         }
 
-        function connectToPeer() {
-            const targetId = document.getElementById('peer-id-input').value;
-            if (!targetId || targetId.length !== 4) {
-                alert("Insira um código de 4 dígitos válido.");
+        function updateProfilePic() {
+            const file = document.getElementById('profile-pic-input').files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                myProfile.pic = reader.result;
+                document.getElementById('my-profile-pic-display').src = reader.result;
+                localStorage.setItem('p2p_profile_v4', JSON.stringify(myProfile));
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- CONTACTS LOGIC ---
+        function updateContactsList() {
+            const list = document.getElementById('contacts-list');
+            list.innerHTML = '';
+            const sortedIds = Object.keys(contacts).sort();
+            
+            if(sortedIds.length === 0) {
+                list.innerHTML = `<div style="text-align:center; padding:50px; color:var(--apple-gray);">Nenhum contato ainda.<br>Clique no + para adicionar.</div>`;
                 return;
             }
-            
-            conn = peer.connect("apple-p2p-" + targetId);
-            setupChat();
-        }
 
-        function setupChat() {
-            document.getElementById('setup-screen').style.display = 'none';
-            document.getElementById('chat-screen').style.display = 'flex';
-            
-            conn.on('open', () => {
-                document.getElementById('chat-with').innerText = "Amigo (" + conn.peer.replace('apple-p2p-', '') + ")";
-                addMessage("Sistema", "Conexão segura estabelecida.", "them");
-            });
-
-            conn.on('data', (data) => {
-                handleIncomingData(data);
-            });
-
-            conn.on('close', () => {
-                alert("Conexão encerrada.");
-                location.reload();
+            sortedIds.forEach(id => {
+                const c = contacts[id];
+                const div = document.createElement('div');
+                div.className = 'contact-item';
+                div.onclick = () => openChat(id);
+                div.innerHTML = `
+                    <img class="profile-pic" src="${c.pic || 'https://www.w3schools.com/howto/img_avatar.png'}">
+                    <div class="contact-info">
+                        <div class="contact-name">${c.name}</div>
+                        <div class="contact-status" id="list-status-${id}">
+                            <span class="status-dot status-offline"></span> Offline
+                        </div>
+                    </div>
+                    <button onclick="deleteContact(event, '${id}')" style="background:none; border:none; color:var(--apple-red); padding:10px;"><i class="fas fa-trash-alt"></i></button>
+                `;
+                list.appendChild(div);
+                checkOnlineStatus(id);
             });
         }
 
-        function handleIncomingData(data) {
-            if (data.type === 'text') {
-                addMessage("Amigo", data.content, "them");
-            } else if (data.type === 'file') {
-                const blob = new Blob([data.payload], { type: data.mime });
-                const url = URL.createObjectURL(blob);
-                
-                if (data.mime.startsWith('image/')) {
-                    addMessage("Amigo", `<img src="${url}" onclick="window.open('${url}')">`, "them");
-                } else if (data.mime.startsWith('video/')) {
-                    addMessage("Amigo", `<video controls src="${url}"></video>`, "them");
-                } else if (data.mime.startsWith('audio/')) {
-                    addMessage("Amigo", `<audio controls src="${url}"></audio>`, "them");
-                } else {
-                    addMessage("Amigo", `<a href="${url}" download="${data.name}" class="file-link"><i class="fas fa-file"></i> ${data.name}</a>`, "them");
-                }
+        function refreshAllStatus() {
+            Object.keys(contacts).forEach(id => checkOnlineStatus(id));
+        }
+
+        function checkOnlineStatus(id) {
+            const tempConn = peer.connect("apple-p2p-v4-" + id);
+            let timeout = setTimeout(() => {
+                tempConn.close();
+                updateStatusUI(id, false);
+            }, 3000);
+
+            tempConn.on('open', () => {
+                clearTimeout(timeout);
+                updateStatusUI(id, true);
+                tempConn.close();
+            });
+        }
+
+        function updateStatusUI(id, isOnline) {
+            const el = document.getElementById('list-status-' + id);
+            if(el) {
+                el.innerHTML = isOnline ? 
+                    `<span class="status-dot status-online"></span> Online` : 
+                    `<span class="status-dot status-offline"></span> Offline`;
             }
+            if(activeChatId === id) {
+                document.getElementById('chat-status-dot').className = 'status-dot ' + (isOnline ? 'status-online' : 'status-offline');
+                document.getElementById('chat-status-text').innerText = isOnline ? 'Online' : 'Offline';
+            }
+        }
+
+        function deleteContact(e, id) {
+            e.stopPropagation();
+            if(confirm("Deseja realmente excluir este contato?")) {
+                delete contacts[id];
+                localStorage.setItem('p2p_contacts_v4', JSON.stringify(contacts));
+                updateContactsList();
+            }
+        }
+
+        // --- SCANNER LOGIC ---
+        function startScanner() {
+            document.getElementById('scanner-placeholder').style.display = 'none';
+            document.getElementById('start-scan-btn').style.display = 'none';
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+                (decodedText) => {
+                    stopScanner();
+                    addContact(decodedText);
+                },
+                (errorMessage) => {}
+            ).catch(err => {
+                alert("Erro ao abrir câmera: " + err);
+                stopScanner();
+            });
+        }
+
+        function stopScanner() {
+            document.getElementById('scanner-placeholder').style.display = 'flex';
+            document.getElementById('start-scan-btn').style.display = 'block';
+            if(html5QrCode) {
+                html5QrCode.stop().then(() => html5QrCode = null).catch(() => {});
+            }
+        }
+
+        function addContactManual() {
+            const id = document.getElementById('manual-id-input').value;
+            if(id.length === 4) addContact(id);
+            else alert("O código deve ter 4 dígitos.");
+        }
+
+        function addContact(id) {
+            if(id === myId) {
+                alert("Você não pode adicionar a si mesmo.");
+                return;
+            }
+            if(!contacts[id]) {
+                contacts[id] = { name: "Amigo " + id, pic: "", id: id };
+                localStorage.setItem('p2p_contacts_v4', JSON.stringify(contacts));
+            }
+            updateContactsList();
+            showScreen('main-screen');
+            openChat(id);
+        }
+
+        // --- CHAT LOGIC ---
+        function openChat(id) {
+            activeChatId = id;
+            const c = contacts[id];
+            document.getElementById('chat-username').innerText = c.name;
+            document.getElementById('chat-profile-pic').src = c.pic || 'https://www.w3schools.com/howto/img_avatar.png';
+            document.getElementById('messages').innerHTML = '';
+            showScreen('chat-screen');
+
+            if(conn) conn.close();
+            conn = peer.connect("apple-p2p-v4-" + id);
+            setupConnectionHandlers(conn);
+        }
+
+        function handleIncomingConnection(c) {
+            const id = c.peer.replace('apple-p2p-v4-', '');
+            if(!contacts[id]) {
+                contacts[id] = { name: "Novo Amigo", pic: "", id: id };
+                localStorage.setItem('p2p_contacts_v4', JSON.stringify(contacts));
+                updateContactsList();
+            }
+            conn = c;
+            setupConnectionHandlers(c);
+            if(activeChatId !== id) openChat(id);
+        }
+
+        function setupConnectionHandlers(c) {
+            c.on('open', () => {
+                updateStatusUI(activeChatId, true);
+                c.send({type: 'profile_sync', profile: myProfile});
+            });
+            c.on('data', data => {
+                if(data.type === 'profile_sync') {
+                    const id = c.peer.replace('apple-p2p-v4-', '');
+                    contacts[id].name = data.profile.name;
+                    contacts[id].pic = data.profile.pic;
+                    localStorage.setItem('p2p_contacts_v4', JSON.stringify(contacts));
+                    if(activeChatId === id) {
+                        document.getElementById('chat-username').innerText = data.profile.name;
+                        document.getElementById('chat-profile-pic').src = data.profile.pic || 'https://www.w3schools.com/howto/img_avatar.png';
+                    }
+                    updateContactsList();
+                } else if(data.type === 'text') {
+                    addMessage(data.content, 'them');
+                } else if(data.type === 'file') {
+                    const blob = new Blob([data.payload], {type: data.mime});
+                    const url = URL.createObjectURL(blob);
+                    if(data.mime.startsWith('image/')) addMessage(`<img src="${url}" onclick="window.open('${url}')">`, 'them');
+                    else if(data.mime.startsWith('video/')) addMessage(`<video controls src="${url}"></video>`, 'them');
+                    else if(data.mime.startsWith('audio/')) addMessage(`<audio controls src="${url}"></audio>`, 'them');
+                    else addMessage(`<a href="${url}" download="${data.name}" style="color:inherit; text-decoration:none; display:flex; align-items:center; gap:10px;"><i class="fas fa-file-alt" style="font-size:24px;"></i> ${data.name}</a>`, 'them');
+                }
+            });
+            c.on('close', () => {
+                if(activeChatId === c.peer.replace('apple-p2p-v4-', '')) {
+                    updateStatusUI(activeChatId, false);
+                }
+            });
         }
 
         function sendMessage() {
             const input = document.getElementById('message-input');
             const text = input.value.trim();
-            if (!text || !conn) return;
+            if(!text || !conn) return;
+            conn.send({type: 'text', content: text});
+            addMessage(text, 'me');
+            input.value = '';
+        }
 
-            conn.send({ type: 'text', content: text });
-            addMessage("Eu", text, "me");
-            input.value = "";
+        function addMessage(content, type) {
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.innerHTML = content;
+            const container = document.getElementById('messages');
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
         }
 
         function sendFile() {
-            const fileInput = document.getElementById('file-input');
-            const file = fileInput.files[0];
-            if (!file || !conn) return;
-
+            const file = document.getElementById('file-input').files[0];
+            if(!file || !conn) return;
             const reader = new FileReader();
             reader.onload = () => {
-                conn.send({
-                    type: 'file',
-                    name: file.name,
-                    mime: file.type,
-                    payload: reader.result
-                });
-
+                conn.send({type: 'file', name: file.name, mime: file.type, payload: reader.result});
                 const url = URL.createObjectURL(file);
-                if (file.type.startsWith('image/')) {
-                    addMessage("Eu", `<img src="${url}">`, "me");
-                } else {
-                    addMessage("Eu", `<i class="fas fa-file"></i> ${file.name}`, "me");
-                }
+                if(file.type.startsWith('image/')) addMessage(`<img src="${url}">`, 'me');
+                else addMessage(`<i class="fas fa-file"></i> ${file.name}`, 'me');
             };
             reader.readAsArrayBuffer(file);
         }
 
-        function addMessage(sender, content, type) {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `message ${type}`;
-            msgDiv.innerHTML = content;
-            document.getElementById('messages').appendChild(msgDiv);
-            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+        // --- CALL LOGIC ---
+        async function startCall(video) {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({video: video, audio: true});
+                document.getElementById('local-video').srcObject = localStream;
+                document.getElementById('video-call-overlay').style.display = 'flex';
+                const call = peer.call(conn.peer, localStream);
+                setupCallHandlers(call);
+            } catch (err) {
+                alert("Erro ao acessar câmera/microfone: " + err);
+            }
         }
 
-        // Voice Recording Logic
-        const voiceBtn = document.getElementById('voice-btn');
-        const recordingUI = document.getElementById('recording-ui');
+        function acceptCall() {
+            document.getElementById('incoming-call-modal').style.display = 'none';
+            navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(stream => {
+                localStream = stream;
+                document.getElementById('local-video').srcObject = stream;
+                document.getElementById('video-call-overlay').style.display = 'flex';
+                currentCall.answer(stream);
+                setupCallHandlers(currentCall);
+            });
+        }
 
+        function rejectCall() {
+            document.getElementById('incoming-call-modal').style.display = 'none';
+            if(currentCall) currentCall.close();
+        }
+
+        function setupCallHandlers(call) {
+            currentCall = call;
+            call.on('stream', rs => {
+                document.getElementById('remote-video').srcObject = rs;
+            });
+            call.on('close', () => endCall());
+        }
+
+        function endCall() {
+            if(currentCall) currentCall.close();
+            if(localStream) localStream.getTracks().forEach(t => t.stop());
+            document.getElementById('video-call-overlay').style.display = 'none';
+        }
+
+        function toggleMute() {
+            const audioTrack = localStream.getAudioTracks()[0];
+            audioTrack.enabled = !audioTrack.enabled;
+            document.getElementById('call-mute-icon').className = audioTrack.enabled ? 'fas fa-microphone' : 'fas fa-microphone-slash';
+        }
+
+        function toggleCamera() {
+            const videoTrack = localStream.getVideoTracks()[0];
+            videoTrack.enabled = !videoTrack.enabled;
+            document.getElementById('call-camera-icon').className = videoTrack.enabled ? 'fas fa-video' : 'fas fa-video-slash';
+        }
+
+        // --- VOICE RECORDING ---
+        const voiceBtn = document.getElementById('voice-btn');
         voiceBtn.onmousedown = async () => {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
-                
-                mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                 mediaRecorder.onstop = () => {
                     const blob = new Blob(audioChunks, { type: 'audio/ogg; codecs=opus' });
                     const reader = new FileReader();
                     reader.onload = () => {
-                        conn.send({
-                            type: 'file',
-                            name: 'audio_message.ogg',
-                            mime: 'audio/ogg',
-                            payload: reader.result
-                        });
-                        const url = URL.createObjectURL(blob);
-                        addMessage("Eu", `<audio controls src="${url}"></audio>`, "me");
+                        conn.send({type: 'file', name: 'audio.ogg', mime: 'audio/ogg', payload: reader.result});
+                        addMessage(`<audio controls src="${URL.createObjectURL(blob)}"></audio>`, 'me');
                     };
                     reader.readAsArrayBuffer(blob);
                 };
-
                 mediaRecorder.start();
-                recordingUI.style.display = 'flex';
-            } catch (err) {
-                alert("Erro ao acessar microfone: " + err);
-            }
+                document.getElementById('recording-ui').style.display = 'flex';
+            } catch (err) { alert(err); }
         };
-
         voiceBtn.onmouseup = () => {
-            if (mediaRecorder && mediaRecorder.state === "recording") {
+            if(mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
-                recordingUI.style.display = 'none';
+                document.getElementById('recording-ui').style.display = 'none';
             }
         };
 
-        // Handle Enter key
-        document.getElementById('message-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
+        function generateQR(text) {
+            const qr = qrcode(0, 'M');
+            qr.addData(text);
+            qr.make();
+            document.getElementById('qrcode-display').innerHTML = qr.createImgTag(6);
+        }
 
-        // Start the app
-        initPeer();
+        document.getElementById('message-input').onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
+
+        init();
     </script>
 </body>
 </html>
